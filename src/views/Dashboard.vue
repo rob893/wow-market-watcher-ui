@@ -7,15 +7,21 @@
     <input v-model="per" type="number" />
     <button @click="test()">Test</button>
     <button @click="getUsers()">Test Get Users</button>
+    <test-chart></test-chart>
   </div>
 </template>
 
 <script lang="ts">
 import { userService } from '@/services';
+import TestChart from '@/components/charts/TestChart.vue';
 import Vue from 'vue';
 
 export default Vue.extend({
   name: 'Dashboard',
+
+  components: {
+    TestChart
+  },
 
   data: () => ({
     status: 500,

@@ -5,7 +5,7 @@ import { TypeGuards } from './TypeGuards';
 import {
   AxiosRequestConfigWithMetadata,
   HttpStatusCode,
-  HttpVerb,
+  HttpMethod,
   Logger,
   RetryOptions,
   WoWMarketWatcherServiceHeaders
@@ -124,18 +124,50 @@ export class HttpInterceptors {
           const shouldRetry = (): boolean => {
             if (!response) {
               logger.info(
-                `${HttpInterceptors.name}.${this.useRetryInterceptor.name}: Network error. Request for ${operation} should be retried.`
+                `${HttpInterceptors.name}.${this.useRetryInterceptor.name}: Network error: ${error.message}. Request for ${operation} should be retried.`
               );
               return true;
             }
 
-            const { status } = response;
+            const httpMethodsToRetry: string[] = [
+              HttpMethod.Get,
+              HttpMethod.Put,
+              HttpMethod.Options,
+              HttpMethod.Delete,
+              HttpMethod.Head
+            ];
 
-            if (status >= 500) {
+            if (!method || !httpMethodsToRetry.includes(method.toUpperCase())) {
               logger.info(
-                `${HttpInterceptors.name}.${this.useRetryInterceptor.name}: Response error meets retry eligibility. Request for ${operation} should be retried.`
+                `${HttpInterceptors.name}.${
+                  this.useRetryInterceptor.name
+                }: Request method ${method?.toLocaleUpperCase()} is not eligible for retry. Request for ${operation} should not be retried.`
               );
               return true;
+            }
+
+            const retryStatusCodeRanges: [number, number][] = [
+              // https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+              // 1xx - Retry (Informational, request still processing)
+              // 2xx - Do not retry (Success)
+              // 3xx - Do not retry (Redirect)
+              // 4xx - Do not retry (Client errors)
+              // 429 - Retry ("Too Many Requests")
+              // 5xx - Retry (Server errors)
+              [100, 199],
+              [429, 429],
+              [500, 599]
+            ];
+
+            const { status } = response;
+
+            for (const [min, max] of retryStatusCodeRanges) {
+              if (status >= min && status <= max) {
+                logger.info(
+                  `${HttpInterceptors.name}.${this.useRetryInterceptor.name}: Response status ${status} meets retry eligibility. Request for ${operation} should be retried.`
+                );
+                return true;
+              }
             }
 
             logger.info(
@@ -229,7 +261,7 @@ export class HttpInterceptors {
       error => {
         if (
           TypeGuards.isAxiosError(error) &&
-          error.config.method?.toUpperCase() === HttpVerb.Get &&
+          error.config.method?.toUpperCase() === HttpMethod.Get &&
           error.response?.status === HttpStatusCode.NotFound
         ) {
           const { response } = error;
