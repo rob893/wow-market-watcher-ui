@@ -29,4 +29,10 @@ export class Utilities {
   public static formatCurrency(amount: number, currency: string = 'USD'): string {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
   }
+
+  public static wait(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
 }

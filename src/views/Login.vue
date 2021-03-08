@@ -10,8 +10,21 @@
               <v-card-text>
                 <v-alert v-model="showErrorAlert" type="error" dismissible>{{ errorMessage }}</v-alert>
 
-                <v-text-field v-model="username" :rules="usernameRules" label="Username" required />
-                <v-text-field v-model="password" type="password" :rules="passwordRules" label="Password" required />
+                <v-text-field
+                  v-model="username"
+                  :rules="usernameRules"
+                  label="Username"
+                  autocomplete="current-username"
+                  required
+                />
+                <v-text-field
+                  v-model="password"
+                  type="password"
+                  :rules="passwordRules"
+                  label="Password"
+                  autocomplete="current-password"
+                  required
+                />
               </v-card-text>
 
               <div v-if="!loading">

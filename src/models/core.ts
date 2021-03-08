@@ -1,13 +1,13 @@
-export interface Environment {
+export type Environment = Readonly<{
   appTitle: string;
   production: boolean;
-  loggingOptions: LoggingOptions;
+  logging: LoggingOptions;
   env: EnvironmentMode;
   localStoragePrefix: string;
   wowMarketWatcherBaseUrl: string;
   googleAuthClientId: string;
   retryOptions: RetryOptions;
-}
+}>;
 
 export enum EnvironmentMode {
   Development = 'development',
@@ -15,10 +15,19 @@ export enum EnvironmentMode {
 }
 
 export interface LoggingOptions {
-  logLevel: LogLevel;
-  console: {
-    logLevel: LogLevel;
+  logLevel: LogLevelOptions;
+  providers?: {
+    [key: string]: LoggingProviderOptions | undefined;
   };
+}
+
+export interface LoggingProviderOptions {
+  logLevel: LogLevelOptions;
+}
+
+export interface LogLevelOptions {
+  default: LogLevel;
+  [key: string]: LogLevel | undefined;
 }
 
 export interface RetryOptions {
@@ -84,15 +93,6 @@ export interface JSONPatchDocument {
 
 export interface Indexable<TValue = any> {
   [key: string]: TValue;
-}
-
-export enum HttpVerb {
-  Get = 'GET',
-  Post = 'POST',
-  Patch = 'PATCH',
-  Delete = 'DELETE',
-  Put = 'PUT',
-  Options = 'OPTIONS'
 }
 
 export enum WoWMarketWatcherServiceHeaders {

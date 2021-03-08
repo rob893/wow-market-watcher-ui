@@ -33,6 +33,14 @@ export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
 
     return data;
   }
+
+  public async test(status: number, delay: number = 0, statusAfter: number = 200, per: number = 0): Promise<unknown> {
+    const { data } = await this.httpClient.get<unknown>(
+      `test?status=${status}&delay=${delay}&statusAfter=${statusAfter}&per=${per}`
+    );
+
+    return data;
+  }
 }
 
 export const userService = new UserService(axios, authService, environmentService, loggerService);

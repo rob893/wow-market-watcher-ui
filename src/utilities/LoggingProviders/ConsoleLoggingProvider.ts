@@ -5,11 +5,16 @@ export class ConsoleLoggingProvider implements LoggingProvider {
   private readonly logLevel: LogLevel;
 
   public constructor({
-    loggingOptions: {
-      console: { logLevel }
+    logging: {
+      logLevel: { default: defaultLogLevel },
+      providers
     }
   }: EnvironmentService) {
-    this.logLevel = logLevel;
+    if (providers && providers.console) {
+      this.logLevel = providers.console.logLevel.default;
+    } else {
+      this.logLevel = defaultLogLevel;
+    }
   }
 
   public debug(...args: any[]): void {

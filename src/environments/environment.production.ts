@@ -3,13 +3,19 @@ import { commonEnvironment } from './environment.common';
 
 export const productionEnvironment: Environment = {
   ...commonEnvironment,
-  loggingOptions: {
-    logLevel: LogLevel.Warn,
-    console: {
-      logLevel: LogLevel.Off
+  logging: {
+    logLevel: {
+      default: LogLevel.Warn
+    },
+    providers: {
+      console: {
+        logLevel: {
+          default: LogLevel.Off
+        }
+      }
     }
   },
   production: true,
   env: EnvironmentMode.Production,
-  wowMarketWatcherBaseUrl: 'https://localhost:5001/api'
+  wowMarketWatcherBaseUrl: 'https://rwherber.com/wow-market-watcher/v1/api'
 };

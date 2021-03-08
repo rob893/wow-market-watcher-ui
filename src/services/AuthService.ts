@@ -105,6 +105,8 @@ export class AuthService extends WoWMarketWatcherBaseService {
   }
 
   public async registerUser(registerUserDto: RegisterUserDto): Promise<RegisterResponse> {
+    this.logger.debug(`${AuthService.name}.${this.registerUser.name}: Registering user.`);
+
     const { data } = await this.httpClient.post<RegisterResponse>('auth/register', {
       ...registerUserDto,
       deviceId: this.deviceId
@@ -112,10 +114,16 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.handleLoginOrRegisterResponse(data);
 
+    this.logger.info(`${AuthService.name}.${this.registerUser.name}: Registering user account complete.`);
+
     return data;
   }
 
   public async registerUserUsingGoogleAccount(username: string, idToken: string): Promise<RegisterResponse> {
+    this.logger.debug(
+      `${AuthService.name}.${this.registerUserUsingGoogleAccount.name}: Registering user using Google account.`
+    );
+
     const { data } = await this.httpClient.post<RegisterResponse>('auth/register/google', {
       username,
       idToken,
@@ -124,10 +132,16 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.handleLoginOrRegisterResponse(data);
 
+    this.logger.info(
+      `${AuthService.name}.${this.registerUserUsingGoogleAccount.name}: Register user using Google account complete.`
+    );
+
     return data;
   }
 
   public async login(username: string, password: string): Promise<LoginResponse> {
+    this.logger.debug(`${AuthService.name}.${this.login.name}: Logging the user in.`);
+
     const { data } = await this.httpClient.post<LoginResponse>('auth/login', {
       username,
       password,
@@ -136,10 +150,14 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.handleLoginOrRegisterResponse(data);
 
+    this.logger.info(`${AuthService.name}.${this.login.name}: User login complete.`);
+
     return data;
   }
 
   public async loginGoogle(idToken: string): Promise<LoginResponse> {
+    this.logger.debug(`${AuthService.name}.${this.loginGoogle.name}: Logging the user in using Google.`);
+
     const { data } = await this.httpClient.post<LoginResponse>('auth/login/google', {
       idToken,
       deviceId: this.deviceId
@@ -147,31 +165,43 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.handleLoginOrRegisterResponse(data);
 
+    this.logger.info(`${AuthService.name}.${this.loginGoogle.name}: User Google login complete.`);
+
     return data;
   }
 
   public logout(): void {
+    this.logger.debug(`${AuthService.name}.${this.logout.name}: Logging the user out.`);
+
     this.localStorageService.clear();
     this.cachedDeviceId = null;
     this.cachedAccessToken = null;
     this.cachedRefreshToken = null;
     this.cachedLoggedInUser = null;
     this.authChanged.next(false);
+
+    this.logger.info(`${AuthService.name}.${this.logout.name}: User has been logged out.`);
   }
 
   public async getAccessToken(): Promise<string | null> {
     if (!this.accessToken) {
+      this.logger.debug(`${AuthService.name}.${this.getAccessToken.name}: Access token is null.`);
       return null;
     }
 
     if (this.isTokenExpired(this.accessToken)) {
+      this.logger.debug(`${AuthService.name}.${this.getAccessToken.name}: Access token is expired. Refreshing.`);
       await this.refreshAccessToken();
     }
+
+    this.logger.debug(`${AuthService.name}.${this.getAccessToken.name}: Returning cached access token.`);
 
     return this.accessToken;
   }
 
   public async refreshAccessToken(): Promise<RefreshTokenResponse> {
+    this.logger.debug(`${AuthService.name}.${this.refreshAccessToken.name}: Refreshing access token.`);
+
     const result = await this.httpClient.post<RefreshTokenResponse>('auth/refreshToken', {
       token: this.accessToken,
       refreshToken: this.refreshToken,
@@ -185,6 +215,8 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.localStorageService.setItem(this.accessTokenStorageKey, token);
     this.localStorageService.setItem(this.refreshTokenStorageKey, refreshToken);
+
+    this.logger.info(`${AuthService.name}.${this.refreshAccessToken.name}: Access token refreshed.`);
 
     return result.data;
   }

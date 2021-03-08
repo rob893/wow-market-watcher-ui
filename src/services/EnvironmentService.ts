@@ -2,7 +2,7 @@ import { developmentEnvironment } from '@/environments/environment.development';
 import { productionEnvironment } from '@/environments/environment.production';
 import { Environment, EnvironmentMode, LoggingOptions, RetryOptions } from '../models/core';
 
-export class EnvironmentService implements Environment {
+export class EnvironmentService implements Readonly<Environment> {
   private readonly environment: Environment;
 
   public constructor(environment: Environment) {
@@ -13,8 +13,8 @@ export class EnvironmentService implements Environment {
     return this.environment.production;
   }
 
-  public get loggingOptions(): LoggingOptions {
-    return { ...this.environment.loggingOptions };
+  public get logging(): LoggingOptions {
+    return { ...this.environment.logging };
   }
 
   public get localStoragePrefix(): string {
