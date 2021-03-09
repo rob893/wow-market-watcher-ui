@@ -7,27 +7,46 @@
     <input v-model="per" type="number" />
     <button @click="test()">Test</button>
     <button @click="getUsers()">Test Get Users</button>
-    <test-chart></test-chart>
+    <line-chart :chartData="chartData"></line-chart>
+    <line-chart :chartData="chartData"></line-chart>
+    <line-chart :chartData="chartData"></line-chart>
   </div>
 </template>
 
 <script lang="ts">
 import { userService } from '@/services';
-import TestChart from '@/components/charts/TestChart.vue';
+import LineChart from '@/components/charts/LineChart.vue';
 import Vue from 'vue';
+import { ChartData } from 'node_modules/@types/chart.js';
+import colors from 'vuetify/lib/util/colors';
 
 export default Vue.extend({
   name: 'Dashboard',
 
   components: {
-    TestChart
+    LineChart
   },
 
   data: () => ({
     status: 500,
     statusAfter: 200,
     delay: 0,
-    per: 0
+    per: 0,
+    chartData: {
+      labels: ['test', 'test2', 'test3'],
+      datasets: [
+        {
+          label: 'LOL',
+          backgroundColor: colors.red.base,
+          data: [3, 6, 1]
+        },
+        {
+          label: 'LOLZ',
+          backgroundColor: colors.green.base,
+          data: [6, 1, 4]
+        }
+      ]
+    } as ChartData
   }),
 
   methods: {
