@@ -58,7 +58,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
     this.gradient?.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
     this.gradient?.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
 
-    const { r, g, b } = Utilities.hexToRgb(colors.green.base) ?? {};
+    const { r, g, b } = Utilities.hexToRgb(colors.purple.base) ?? {};
 
     this.gradient2?.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.6)`);
     this.gradient2?.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.25)`);
@@ -67,10 +67,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
     this.chartData.datasets?.forEach((set, i) => {
       const gradient = i % 2 === 0 ? this.gradient : this.gradient2;
       set.backgroundColor = gradient;
-      set.borderColor = i % 2 === 0 ? colors.red.base : colors.green.base;
-      set.pointBackgroundColor = 'white';
+      set.borderColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
+      set.pointBackgroundColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
       set.borderWidth = 1;
-      set.pointBorderColor = 'white';
+      set.pointBorderColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
     });
 
     this.renderChart(this.chartData, this.chartOptions);

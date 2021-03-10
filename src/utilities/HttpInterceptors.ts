@@ -143,7 +143,7 @@ export class HttpInterceptors {
                   this.useRetryInterceptor.name
                 }: Request method ${method?.toLocaleUpperCase()} is not eligible for retry. Request for ${operation} should not be retried.`
               );
-              return true;
+              return false;
             }
 
             const retryStatusCodeRanges: [number, number][] = [
