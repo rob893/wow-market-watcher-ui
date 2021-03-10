@@ -13,7 +13,7 @@ export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
       data: { nodes }
     } = await this.httpClient.get<CursorPaginatedResponse<User>>('users');
 
-    return nodes;
+    return nodes ?? [];
   }
 
   public async getUser(id: number): Promise<User | null> {

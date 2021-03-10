@@ -18,3 +18,19 @@ export interface LinkedAccount {
 export enum LinkedAccountType {
   Google = 'Google'
 }
+
+export interface AuctionTimeSeriesEntry {
+  id: number;
+  wowItemId: number;
+  connectedRealmId: number;
+  timestamp: string;
+  totalAvailableForAuction: number;
+  averagePrice: number;
+  minPrice: number;
+  maxPrice: number;
+  price25Percentile: number;
+  price50Percentile: number;
+  price75Percentile: number;
+  price95Percentile: number;
+  price99Percentile: number;
+}

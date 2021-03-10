@@ -7,17 +7,17 @@
     <input v-model="per" type="number" />
     <button @click="test()">Test</button>
     <button @click="getUsers()">Test Get Users</button>
-    <line-chart :chartData="chartData"></line-chart>
+    <line-chart v-if="chartData2" :chartData="chartData2" :chartOptions="chartOptions"></line-chart>
     <line-chart :chartData="chartData"></line-chart>
     <line-chart :chartData="chartData"></line-chart>
   </div>
 </template>
 
 <script lang="ts">
-import { userService } from '@/services';
+import { userService, auctionTimeSeriesService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue from 'vue';
-import { ChartData } from 'node_modules/@types/chart.js';
+import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
 import colors from 'vuetify/lib/util/colors';
 
 export default Vue.extend({
@@ -46,7 +46,9 @@ export default Vue.extend({
           data: [6, 1, 4]
         }
       ]
-    } as ChartData
+    } as ChartData,
+    chartData2: undefined as ChartData | undefined,
+    chartOptions: undefined as ChartOptions | undefined
   }),
 
   methods: {
@@ -58,6 +60,60 @@ export default Vue.extend({
       const users = await userService.getUsers();
       console.log(users);
     }
+  },
+
+  async mounted(): Promise<void> {
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+
+    const timeSeries = await auctionTimeSeriesService.getAuctionTimeSeries({
+      wowItemId: 168589,
+      connectedRealmId: 76,
+      startDate: weekAgo.toISOString(),
+      endDate: now.toISOString()
+    });
+
+    this.chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      tooltips: {
+        intersect: false,
+        mode: 'index'
+      },
+      scales: {
+        xAxes: [
+          {
+            type: 'time',
+            time: {
+              unit: 'day'
+            }
+          }
+        ]
+      }
+    };
+
+    this.chartData2 = {
+      //labels: timeSeries.map(t => t.timestamp),
+      datasets: [
+        {
+          label: 'Average',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.averagePrice / 10000 }))
+        },
+        {
+          label: '50th Percentile',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price50Percentile / 10000 }))
+        },
+        {
+          label: '75th Percentile',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price75Percentile / 10000 }))
+        },
+        {
+          label: '95th Percentile',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price95Percentile / 10000 }))
+        }
+      ]
+    };
   }
 });
 </script>

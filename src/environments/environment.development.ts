@@ -17,5 +17,5 @@ export const developmentEnvironment: Environment = {
   },
   production: false,
   env: EnvironmentMode.Development,
-  wowMarketWatcherBaseUrl: 'http://localhost:5003/api'
+  wowMarketWatcherBaseUrl: 'https://rwherber.com/wow-market-watcher/v1/api' //'http://localhost:5003/api'
 };

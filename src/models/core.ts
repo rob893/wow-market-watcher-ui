@@ -67,8 +67,8 @@ export type JSONObject = {
 };
 
 export interface CursorPaginatedResponse<TEntity> {
-  edges: CursorPaginatedResponseEdge<TEntity>;
-  nodes: TEntity[];
+  edges?: CursorPaginatedResponseEdge<TEntity>;
+  nodes?: TEntity[];
   pageInfo: CursorPaginatedResponsePageInfo;
   totalCount?: number;
 }

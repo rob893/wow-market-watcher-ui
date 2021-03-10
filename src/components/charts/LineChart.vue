@@ -2,7 +2,7 @@
 import Vue, { PropType, VueConstructor } from 'vue';
 import { Line } from 'vue-chartjs';
 import { ChartData, ChartOptions } from 'chart.js';
-import { Utilities } from '@/utilities';
+import { ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
 import colors from 'vuetify/es5/util/colors';
 
 /**
@@ -52,25 +52,48 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
     // this.gradient2?.addColorStop(0.5, 'rgba(0, 231, 255, 0.25)');
     // this.gradient2?.addColorStop(1, 'rgba(0, 231, 255, 0)');
 
-    const rgb = Utilities.hexToRgb(colors.red.base) ?? { r: '', g: '', b: '' };
+    const getColor = (i: number): { gradient: CanvasGradient; color: string } => {
+      const grad = (this.$refs.canvas as HTMLCanvasElement).getContext('2d')?.createLinearGradient(0, 0, 0, 450);
+
+      const colorArr = Object.values(colors)
+        .filter(c => c.base)
+        .map(t => t.base); // [colors.red.base, colors.purple.base, colors.green.base, colors.amber.base];
+      ArrayUtilities.shuffle(colorArr);
+
+      const color = colorArr[i % colorArr.length];
+
+      const rgb = ColorUtilities.hexToRgb(color) ?? { r: '', g: '', b: '' };
+
+      grad?.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`);
+      grad?.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.01)`);
+      grad?.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+      return {
+        gradient: grad!,
+        color
+      };
+    };
+
+    const rgb = ColorUtilities.hexToRgb(colors.red.base) ?? { r: '', g: '', b: '' };
 
     this.gradient?.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
     this.gradient?.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
     this.gradient?.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
 
-    const { r, g, b } = Utilities.hexToRgb(colors.purple.base) ?? {};
+    const { r, g, b } = ColorUtilities.hexToRgb(colors.purple.base) ?? {};
 
     this.gradient2?.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.6)`);
     this.gradient2?.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.25)`);
     this.gradient2?.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
     this.chartData.datasets?.forEach((set, i) => {
-      const gradient = i % 2 === 0 ? this.gradient : this.gradient2;
+      const { gradient, color } = getColor(i);
       set.backgroundColor = gradient;
-      set.borderColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
-      set.pointBackgroundColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
+      set.borderColor = color;
+      //set.pointBackgroundColor = color;
       set.borderWidth = 1;
-      set.pointBorderColor = i % 2 === 0 ? colors.red.base : colors.purple.base;
+      //set.pointBorderColor = color;
+      set.fill = true;
     });
 
     this.renderChart(this.chartData, this.chartOptions);
