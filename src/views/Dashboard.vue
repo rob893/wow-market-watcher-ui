@@ -101,6 +101,10 @@ export default Vue.extend({
           data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.averagePrice / 10000 }))
         },
         {
+          label: 'Min',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.minPrice / 10000 }))
+        },
+        {
           label: '50th Percentile',
           data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price50Percentile / 10000 }))
         },
@@ -111,6 +115,14 @@ export default Vue.extend({
         {
           label: '95th Percentile',
           data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price95Percentile / 10000 }))
+        },
+        {
+          label: '99th Percentile',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price99Percentile / 10000 }))
+        },
+        {
+          label: 'Max',
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.maxPrice / 10000 }))
         }
       ]
     };
