@@ -58,6 +58,12 @@ export enum LogLevel {
   Off
 }
 
+export interface OrderByOptions<T> {
+  orderBy: keyof T;
+  comparer?: (a: T[OrderByOptions<T>['orderBy']], b: T[OrderByOptions<T>['orderBy']]) => number;
+  direction?: 'Ascending' | 'Descending';
+}
+
 export type JSONPrimitive = string | number | boolean | null;
 
 export type JSONArray = (JSONObject | JSONArray | JSONPrimitive)[];

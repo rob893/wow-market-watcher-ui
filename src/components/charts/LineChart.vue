@@ -1,9 +1,10 @@
 <script lang="ts">
 import Vue, { PropType, VueConstructor } from 'vue';
+import colors from 'vuetify/es5/util/colors';
 import { Line } from 'vue-chartjs';
 import { ChartData, ChartOptions } from 'chart.js';
-import { ArrayUtilities, ColorUtilities } from '@/utilities';
-import colors from 'vuetify/es5/util/colors';
+import { ColorUtilities } from '@/utilities';
+import { loggerService } from '@/services';
 
 /**
  * https://github.com/apertureless/vue-chartjs
@@ -21,63 +22,54 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
   props: {
     chartData: {
       type: Object as PropType<ChartData>,
-      default: () => ({
-        labels: [],
-        datasets: []
-      })
+      required: true
     },
     chartOptions: {
       type: Object as PropType<ChartOptions>,
       default: () => ({
         responsive: true,
         maintainAspectRatio: false
-      })
+      }),
+      required: false
+    },
+    chartColors: {
+      type: Array as PropType<string[]>,
+      required: false,
+      validator: value => {
+        if (!Array.isArray(value)) {
+          return false;
+        }
+
+        return value.every(v => typeof v === 'string');
+      }
     }
   },
-
-  data: () => ({
-    gradient: undefined as CanvasGradient | undefined,
-    gradient2: undefined as CanvasGradient | undefined
-  }),
 
   mounted(): void {
     const context = (this.$refs.canvas as HTMLCanvasElement).getContext('2d');
 
     if (!context) {
-      console.error('No context found.');
+      loggerService.error('No context found.');
       return;
     }
 
-    const getColor = (i: number, except: string[]): { gradient: CanvasGradient; color: string } => {
-      const colorArr = Object.values(colors)
-        .filter(c => c.base && !except.includes(c.base))
-        .map(t => t.base); // [colors.red.base, colors.purple.base, colors.green.base, colors.amber.base];
-      ArrayUtilities.shuffle(colorArr);
-
-      const color = colorArr[i % colorArr.length];
-
-      return ColorUtilities.getColorGradient(color, context);
-    };
-
-    const cs: string[] = [];
+    const lineColors = this.chartColors ?? [
+      colors.red.base,
+      colors.purple.base,
+      colors.blue.base,
+      colors.amber.base,
+      colors.indigo.base,
+      colors.green.base,
+      colors.cyan.base
+    ];
 
     this.chartData.datasets?.forEach((set, i) => {
-      let cObject = getColor(i, cs);
+      const { gradient, color } = ColorUtilities.getColorGradient(lineColors[i % lineColors.length], context);
 
-      // while (cs.some(c => ColorUtilities.isClose(c, cObject.color, 50))) {
-      //   cObject = getColor(i, cs);
-      // }
-
-      const { gradient, color } = cObject;
-
-      cs.push(color);
-
-      set.backgroundColor = gradient;
-      set.borderColor = color;
-      //set.pointBackgroundColor = color;
-      set.borderWidth = 1;
-      //set.pointBorderColor = color;
-      set.fill = true;
+      set.backgroundColor ??= gradient;
+      set.borderColor ??= color;
+      set.borderWidth ??= 1;
+      set.fill ??= true;
     });
 
     this.renderChart(this.chartData, this.chartOptions);

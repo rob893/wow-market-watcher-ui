@@ -65,7 +65,7 @@ export default Vue.extend({
   async mounted(): Promise<void> {
     const now = new Date();
     const weekAgo = new Date(now);
-    weekAgo.setDate(now.getDate() - 7);
+    weekAgo.setDate(now.getDate() - 30);
 
     const timeSeries = await auctionTimeSeriesService.getAuctionTimeSeries({
       wowItemId: 168589,
@@ -98,31 +98,38 @@ export default Vue.extend({
       datasets: [
         {
           label: 'Average',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.averagePrice / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.averagePrice / 10000 })),
+          pointRadius: 0
         },
         {
           label: 'Min',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.minPrice / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.minPrice / 10000 })),
+          pointRadius: 0
         },
         {
           label: '50th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price50Percentile / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price50Percentile / 10000 })),
+          pointRadius: 0
         },
         {
           label: '75th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price75Percentile / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price75Percentile / 10000 })),
+          pointRadius: 0
         },
         {
           label: '95th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price95Percentile / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price95Percentile / 10000 })),
+          pointRadius: 0
         },
         {
           label: '99th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price99Percentile / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price99Percentile / 10000 })),
+          pointRadius: 0
         },
         {
           label: 'Max',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.maxPrice / 10000 }))
+          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.maxPrice / 10000 })),
+          pointRadius: 0
         }
       ]
     };
