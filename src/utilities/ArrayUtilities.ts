@@ -1,3 +1,5 @@
+import { OrderByOptions } from '@/models';
+
 export class ArrayUtilities {
   public static removeItem<T>(arr: T[], item: T): boolean {
     const index = arr.indexOf(item);
@@ -8,6 +10,36 @@ export class ArrayUtilities {
     }
 
     return false;
+  }
+
+  public static orderBy<T>(array: T[], orderByOptions: OrderByOptions<T>): T[] {
+    const { orderBy, comparer, direction } = orderByOptions;
+
+    if (comparer) {
+      array.sort((a, b) => comparer(a[orderBy], b[orderBy]));
+    } else {
+      array.sort((a, b) => {
+        if (direction === 'Descending') {
+          if (a[orderBy] < b[orderBy]) {
+            return 1;
+          } else if (a[orderBy] > b[orderBy]) {
+            return -1;
+          } else {
+            return 0;
+          }
+        }
+
+        if (a[orderBy] > b[orderBy]) {
+          return 1;
+        } else if (a[orderBy] < b[orderBy]) {
+          return -1;
+        } else {
+          return 0;
+        }
+      });
+    }
+
+    return array;
   }
 
   public static shuffle<T>(array: T[]): T[] {
@@ -36,5 +68,15 @@ export class ArrayUtilities {
     }
 
     return array[Math.floor(Math.random() * array.length)];
+  }
+}
+
+export class Comparer {
+  public static dateAscending(a: string | number, b: string | number): number {
+    return new Date(a).getTime() - new Date(b).getTime();
+  }
+
+  public static dateDescending(a: string | number, b: string | number): number {
+    return new Date(b).getTime() - new Date(a).getTime();
   }
 }

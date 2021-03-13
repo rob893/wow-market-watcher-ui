@@ -7,18 +7,24 @@
     <input v-model="per" type="number" />
     <button @click="test()">Test</button>
     <button @click="getUsers()">Test Get Users</button>
-    <line-chart v-if="chartData2" :chartData="chartData2" :chartOptions="chartOptions"></line-chart>
-    <line-chart :chartData="chartData"></line-chart>
-    <line-chart :chartData="chartData"></line-chart>
+    <div v-if="chartDatas">
+      <line-chart
+        v-for="(chartData, index) in chartDatas"
+        :key="index"
+        :chartData="chartData"
+        :chartOptions="chartOptions"
+      ></line-chart>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { userService, auctionTimeSeriesService } from '@/services';
+import { userService, auctionTimeSeriesService, authService, watchListService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue from 'vue';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
-import colors from 'vuetify/lib/util/colors';
+import { Comparer } from '@/utilities';
+import { AuctionTimeSeriesEntry } from '@/models';
 
 export default Vue.extend({
   name: 'Dashboard',
@@ -32,22 +38,7 @@ export default Vue.extend({
     statusAfter: 200,
     delay: 0,
     per: 0,
-    chartData: {
-      labels: ['test', 'test2', 'test3'],
-      datasets: [
-        {
-          label: 'LOL',
-          backgroundColor: colors.red.base,
-          data: [3, 6, 1]
-        },
-        {
-          label: 'LOLZ',
-          backgroundColor: colors.green.base,
-          data: [6, 1, 4]
-        }
-      ]
-    } as ChartData,
-    chartData2: undefined as ChartData | undefined,
+    chartDatas: undefined as ChartData[] | undefined,
     chartOptions: undefined as ChartOptions | undefined
   }),
 
@@ -63,20 +54,44 @@ export default Vue.extend({
   },
 
   async mounted(): Promise<void> {
-    const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(now.getDate() - 30);
+    const userId = authService.loggedInUser?.id ?? 0;
 
-    const timeSeries = await auctionTimeSeriesService.getAuctionTimeSeries({
-      wowItemId: 168589,
-      connectedRealmId: 76,
-      startDate: weekAgo.toISOString(),
-      endDate: now.toISOString()
-    });
+    const watchLists = await watchListService.getWatchListsForUser(userId);
+
+    const watchList = watchLists[0];
+
+    const timeSeriesPromises: Promise<AuctionTimeSeriesEntry[]>[] = [];
+
+    const weekAgo = new Date();
+    weekAgo.setDate(new Date().getDate() - 30);
+
+    console.log(watchLists);
+
+    for (const item of watchList.watchedItems) {
+      timeSeriesPromises.push(
+        auctionTimeSeriesService.getAuctionTimeSeries(
+          {
+            wowItemId: item.id,
+            connectedRealmId: watchList.connectedRealmId,
+            startDate: weekAgo.toISOString()
+          },
+          {
+            orderBy: 'timestamp',
+            comparer: Comparer.dateAscending
+          }
+        )
+      );
+    }
+
+    const timeSeriesArr = await Promise.all(timeSeriesPromises);
 
     this.chartOptions = {
       responsive: true,
       maintainAspectRatio: false,
+      title: {
+        display: true,
+        text: 'BALLS'
+      },
       tooltips: {
         intersect: false,
         mode: 'index'
@@ -93,46 +108,94 @@ export default Vue.extend({
       }
     };
 
-    this.chartData2 = {
-      //labels: timeSeries.map(t => t.timestamp),
-      datasets: [
+    const chartDatas: ChartData[] = [];
+
+    for (const timeSeries of timeSeriesArr) {
+      const mapped = timeSeries.reduce<{
+        min: { t: string; y: number }[];
+        max: { t: string; y: number }[];
+        average: { t: string; y: number }[];
+        price25: { t: string; y: number }[];
+        price50: { t: string; y: number }[];
+        price75: { t: string; y: number }[];
+        price95: { t: string; y: number }[];
+        price99: { t: string; y: number }[];
+      }>(
+        (prev, curr) => ({
+          min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
+          max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
+          average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
+          price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
+          price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
+          price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
+          price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
+          price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }]
+        }),
         {
-          label: 'Average',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.averagePrice / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: 'Min',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.minPrice / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: '50th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price50Percentile / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: '75th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price75Percentile / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: '95th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price95Percentile / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: '99th Percentile',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.price99Percentile / 10000 })),
-          pointRadius: 0
-        },
-        {
-          label: 'Max',
-          data: timeSeries.map(entry => ({ t: entry.timestamp, y: entry.maxPrice / 10000 })),
-          pointRadius: 0
+          min: [],
+          max: [],
+          average: [],
+          price25: [],
+          price50: [],
+          price75: [],
+          price95: [],
+          price99: []
         }
-      ]
-    };
+      );
+
+      chartDatas.push({
+        datasets: [
+          {
+            label: 'Average',
+            data: mapped.average,
+            pointRadius: 0
+          },
+          {
+            label: 'Min',
+            data: mapped.min,
+            pointRadius: 0,
+            hidden: true
+          },
+          {
+            label: 'Max',
+            data: mapped.max,
+            pointRadius: 0,
+            hidden: true
+          },
+          {
+            label: '25th Percentile',
+            data: mapped.price25,
+            pointRadius: 0,
+            hidden: true
+          },
+          {
+            label: '50th Percentile',
+            data: mapped.price50,
+            pointRadius: 0
+          },
+          {
+            label: '75th Percentile',
+            data: mapped.price75,
+            pointRadius: 0,
+            hidden: true
+          },
+          {
+            label: '95th Percentile',
+            data: mapped.price95,
+            pointRadius: 0,
+            hidden: true
+          },
+          {
+            label: '99th Percentile',
+            data: mapped.price99,
+            pointRadius: 0,
+            hidden: true
+          }
+        ]
+      });
+
+      this.chartDatas = chartDatas;
+    }
   }
 });
 </script>

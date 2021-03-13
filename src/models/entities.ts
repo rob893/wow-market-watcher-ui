@@ -34,3 +34,17 @@ export interface AuctionTimeSeriesEntry {
   price95Percentile: number;
   price99Percentile: number;
 }
+
+export interface WoWItem {
+  id: number;
+  name: string;
+}
+
+export interface WatchList {
+  id: number;
+  userId: number;
+  connectedRealmId: number;
+  name: string;
+  description?: string;
+  watchedItems: WoWItem[];
+}

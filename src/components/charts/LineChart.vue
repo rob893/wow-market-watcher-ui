@@ -60,6 +60,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
       colors.amber.base,
       colors.indigo.base,
       colors.green.base,
+      colors.pink.base,
       colors.cyan.base
     ];
 

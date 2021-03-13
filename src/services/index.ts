@@ -6,3 +6,4 @@ export * from './AuctionTimeSeriesService';
 export * from './GoogleAuthService';
 export * from './LoggerService';
 export * from './EnvironmentService';
+export * from './WatchListService';

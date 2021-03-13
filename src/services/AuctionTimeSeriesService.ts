@@ -21,21 +21,11 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
       data: { nodes }
     } = await this.httpClient.get<CursorPaginatedResponse<AuctionTimeSeriesEntry>>(`wow/auctionTimeSeries?${query}`);
 
-    // if (orderByOptions && nodes) {
-    //   const { orderBy, comparer, direction } = orderByOptions;
+    if (orderByOptions && nodes) {
+      ArrayUtilities.orderBy(nodes, orderByOptions);
+    }
 
-    //   if (comparer) {
-    //     nodes.sort((a, b) => comparer(a[orderBy], b[orderBy]));
-    //   } else {
-    //     nodes.sort((a, b) => {
-    //       if (direction === 'Ascending') {
-    //         return b[orderBy] - a[orderBy];
-    //       }
-    //     })
-    //   }
-    // }
-
-    return ArrayUtilities.shuffle(nodes ?? []);
+    return nodes ?? [];
   }
 }
 
