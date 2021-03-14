@@ -9,22 +9,30 @@
     <button @click="getUsers()">Test Get Users</button>
     <div v-if="chartDatas">
       <line-chart
-        v-for="(chartData, index) in chartDatas"
+        v-for="({ data, name }, index) in chartDatas"
         :key="index"
-        :chartData="chartData"
-        :chartOptions="chartOptions"
+        :chartData="data"
+        :chartOptions="{
+          ...chartOptions,
+          ...{
+            title: {
+              display: true,
+              text: name
+            }
+          }
+        }"
       ></line-chart>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { userService, auctionTimeSeriesService, authService, watchListService } from '@/services';
+import { userService, auctionTimeSeriesService, authService, watchListService, loggerService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue from 'vue';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
 import { Comparer } from '@/utilities';
-import { AuctionTimeSeriesEntry } from '@/models';
+import { AuctionTimeSeriesEntry, WoWItem } from '@/models';
 
 export default Vue.extend({
   name: 'Dashboard',
@@ -38,7 +46,7 @@ export default Vue.extend({
     statusAfter: 200,
     delay: 0,
     per: 0,
-    chartDatas: undefined as ChartData[] | undefined,
+    chartDatas: undefined as { data: ChartData; name: string }[] | undefined,
     chartOptions: undefined as ChartOptions | undefined
   }),
 
@@ -58,6 +66,11 @@ export default Vue.extend({
 
     const watchLists = await watchListService.getWatchListsForUser(userId);
 
+    if (watchLists.length === 0) {
+      loggerService.info('No watch lists');
+      return;
+    }
+
     const watchList = watchLists[0];
 
     const timeSeriesPromises: Promise<AuctionTimeSeriesEntry[]>[] = [];
@@ -65,15 +78,16 @@ export default Vue.extend({
     const weekAgo = new Date();
     weekAgo.setDate(new Date().getDate() - 30);
 
-    console.log(watchLists);
+    const wowItems = new Map<number, WoWItem>();
 
     for (const item of watchList.watchedItems) {
+      wowItems.set(item.id, item);
       timeSeriesPromises.push(
         auctionTimeSeriesService.getAuctionTimeSeries(
           {
             wowItemId: item.id,
             connectedRealmId: watchList.connectedRealmId,
-            startDate: weekAgo.toISOString()
+            startDate: weekAgo.toISOString().split('T')[0]
           },
           {
             orderBy: 'timestamp',
@@ -88,13 +102,12 @@ export default Vue.extend({
     this.chartOptions = {
       responsive: true,
       maintainAspectRatio: false,
-      title: {
-        display: true,
-        text: 'BALLS'
-      },
       tooltips: {
         intersect: false,
-        mode: 'index'
+        mode: 'index',
+        callbacks: {
+          title: items => (items.length > 0 ? new Date(items[0].label ?? '').toLocaleString('en-US') : 'No Label')
+        }
       },
       scales: {
         xAxes: [
@@ -108,10 +121,11 @@ export default Vue.extend({
       }
     };
 
-    const chartDatas: ChartData[] = [];
+    const chartDatas: { data: ChartData; name: string }[] = [];
 
     for (const timeSeries of timeSeriesArr) {
       const mapped = timeSeries.reduce<{
+        name: string;
         min: { t: string; y: number }[];
         max: { t: string; y: number }[];
         average: { t: string; y: number }[];
@@ -122,6 +136,7 @@ export default Vue.extend({
         price99: { t: string; y: number }[];
       }>(
         (prev, curr) => ({
+          name: wowItems.get(curr.wowItemId)?.name ?? 'N/A',
           min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
           max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
           average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
@@ -132,6 +147,7 @@ export default Vue.extend({
           price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }]
         }),
         {
+          name: '',
           min: [],
           max: [],
           average: [],
@@ -144,58 +160,61 @@ export default Vue.extend({
       );
 
       chartDatas.push({
-        datasets: [
-          {
-            label: 'Average',
-            data: mapped.average,
-            pointRadius: 0
-          },
-          {
-            label: 'Min',
-            data: mapped.min,
-            pointRadius: 0,
-            hidden: true
-          },
-          {
-            label: 'Max',
-            data: mapped.max,
-            pointRadius: 0,
-            hidden: true
-          },
-          {
-            label: '25th Percentile',
-            data: mapped.price25,
-            pointRadius: 0,
-            hidden: true
-          },
-          {
-            label: '50th Percentile',
-            data: mapped.price50,
-            pointRadius: 0
-          },
-          {
-            label: '75th Percentile',
-            data: mapped.price75,
-            pointRadius: 0,
-            hidden: true
-          },
-          {
-            label: '95th Percentile',
-            data: mapped.price95,
-            pointRadius: 0,
-            hidden: true
-          },
-          {
-            label: '99th Percentile',
-            data: mapped.price99,
-            pointRadius: 0,
-            hidden: true
-          }
-        ]
+        name: mapped.name,
+        data: {
+          datasets: [
+            {
+              label: 'Average',
+              data: mapped.average,
+              pointRadius: 0
+            },
+            {
+              label: 'Min',
+              data: mapped.min,
+              pointRadius: 0,
+              hidden: true
+            },
+            {
+              label: 'Max',
+              data: mapped.max,
+              pointRadius: 0,
+              hidden: true
+            },
+            {
+              label: '25th Percentile',
+              data: mapped.price25,
+              pointRadius: 0,
+              hidden: true
+            },
+            {
+              label: '50th Percentile',
+              data: mapped.price50,
+              pointRadius: 0
+            },
+            {
+              label: '75th Percentile',
+              data: mapped.price75,
+              pointRadius: 0,
+              hidden: true
+            },
+            {
+              label: '95th Percentile',
+              data: mapped.price95,
+              pointRadius: 0,
+              hidden: true
+            },
+            {
+              label: '99th Percentile',
+              data: mapped.price99,
+              pointRadius: 0,
+              hidden: true
+            }
+          ]
+        }
       });
-
-      this.chartDatas = chartDatas;
     }
+
+    this.chartDatas = chartDatas;
   }
 });
 </script>

@@ -24,6 +24,14 @@ export class LoggerService implements Logger {
     this.log(LogLevel.Error, message, ...optionalParams);
   }
 
+  public group(label: string, collapsed: boolean = false): void {
+    this.loggingProviders.forEach(provider => provider.group(label, collapsed));
+  }
+
+  public groupEnd(): void {
+    this.loggingProviders.forEach(provider => provider.groupEnd());
+  }
+
   private log(logLevel: LogLevel, message?: unknown, ...optionalParams: any[]): void {
     this.loggingProviders.forEach(logger => {
       switch (logLevel) {

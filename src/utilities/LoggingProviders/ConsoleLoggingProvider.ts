@@ -33,6 +33,18 @@ export class ConsoleLoggingProvider implements LoggingProvider {
     this.log(LogLevel.Error, ...args);
   }
 
+  public group(label: string, collapsed: boolean = false): void {
+    if (collapsed) {
+      console.groupCollapsed(label);
+    } else {
+      console.group(label);
+    }
+  }
+
+  public groupEnd(): void {
+    console.groupEnd();
+  }
+
   private log(logLevel: LogLevel, ...args: any[]): void {
     if (this.logLevel <= logLevel) {
       switch (logLevel) {

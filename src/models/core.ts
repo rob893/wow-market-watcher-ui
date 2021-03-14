@@ -41,6 +41,8 @@ export interface Logger {
   info(message?: any, ...optionalParams: any[]): void;
   warn(message?: any, ...optionalParams: any[]): void;
   error(message?: any, ...optionalParams: any[]): void;
+  group(label: string, collapsed?: boolean): void;
+  groupEnd(): void;
 }
 
 export interface LoggingProvider {
@@ -48,6 +50,8 @@ export interface LoggingProvider {
   info(...args: any[]): void;
   warn(...args: any[]): void;
   error(...args: any[]): void;
+  group(label: string, collapsed?: boolean): void;
+  groupEnd(): void;
 }
 
 export enum LogLevel {
