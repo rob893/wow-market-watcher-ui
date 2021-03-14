@@ -3,5 +3,7 @@ export enum RouteName {
   Login = 'Login',
   About = 'About',
   Dashboard = 'Dashboard',
-  Default = 'Default'
+  Default = 'Default',
+  WatchLists = 'WatchLists',
+  Test = 'Test'
 }

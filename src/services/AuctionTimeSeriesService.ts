@@ -22,6 +22,12 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
   ) {
     super(axiosStatic, authService, environmentService, logger);
     this.cache = cache;
+
+    authService.authChanged.subscribe(authStatus => {
+      if (!authStatus) {
+        this.cache.clear();
+      }
+    });
   }
 
   public async getAuctionTimeSeries(

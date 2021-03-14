@@ -29,12 +29,30 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-if="isUserLoggedIn" link to="/watch-lists">
+          <v-list-item-action>
+            <v-icon>mdi-information</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Watch Lists</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item link to="/about">
           <v-list-item-action>
             <v-icon>mdi-information</v-icon>
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>About</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item v-if="isUserLoggedIn" link to="/test">
+          <v-list-item-action>
+            <v-icon>mdi-information</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Test</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 

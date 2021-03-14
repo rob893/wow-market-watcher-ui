@@ -3,8 +3,11 @@ import VueRouter from 'vue-router';
 import Register from '@/views/Register.vue';
 import Login from '@/views/Login.vue';
 import Dashboard from '@/views/Dashboard.vue';
+import Test from '@/views/Test.vue';
+import WatchLists from '@/views/WatchLists.vue';
 import { authService } from '@/services/AuthService';
 import { RouteName } from './RouteName';
+import { HttpStatusCode } from '@/models';
 
 Vue.use(VueRouter);
 
@@ -34,6 +37,16 @@ const router = new VueRouter({
       component: Login
     },
     {
+      path: '/watch-lists',
+      name: RouteName.WatchLists,
+      component: WatchLists
+    },
+    {
+      path: '/test',
+      name: RouteName.Test,
+      component: Test
+    },
+    {
       path: '*',
       name: RouteName.Default,
       component: Dashboard
@@ -56,8 +69,8 @@ router.beforeEach((to, _from, next) => {
 });
 
 authService.unauthorizedActionAttempted.subscribe(statusCode => {
-  if (statusCode === 401 || statusCode === 403) {
-    router.push({ name: RouteName.Login });
+  if (statusCode === HttpStatusCode.Unauthorized || statusCode === HttpStatusCode.Forbidden) {
+    authService.logout();
   }
 });
 

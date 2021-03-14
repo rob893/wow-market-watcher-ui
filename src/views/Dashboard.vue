@@ -1,33 +1,19 @@
 <template>
   <div class="about">
     <h1>This is the Dashboard</h1>
-    <input v-model="status" type="number" />
-    <input v-model="statusAfter" type="number" />
-    <input v-model="delay" type="number" />
-    <input v-model="per" type="number" />
-    <button @click="test()">Test</button>
-    <button @click="getUsers()">Test Get Users</button>
     <div v-if="chartDatas">
-      <line-chart
-        v-for="({ data, name }, index) in chartDatas"
-        :key="index"
-        :chartData="data"
-        :chartOptions="{
-          ...chartOptions,
-          ...{
-            title: {
-              display: true,
-              text: name
-            }
-          }
-        }"
-      ></line-chart>
+      <div v-for="({ data, name }, index) in chartDatas" :key="index">
+        <v-card elevation="2">
+          <v-card-title>{{ name }}</v-card-title>
+        </v-card>
+        <line-chart :chartData="data" :chartOptions="chartOptions" />
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { userService, auctionTimeSeriesService, authService, watchListService, loggerService } from '@/services';
+import { auctionTimeSeriesService, authService, watchListService, loggerService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue from 'vue';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
@@ -42,24 +28,9 @@ export default Vue.extend({
   },
 
   data: () => ({
-    status: 500,
-    statusAfter: 200,
-    delay: 0,
-    per: 0,
     chartDatas: undefined as { data: ChartData; name: string }[] | undefined,
     chartOptions: undefined as ChartOptions | undefined
   }),
-
-  methods: {
-    async test(): Promise<void> {
-      await userService.test(this.status, this.delay, this.statusAfter, this.per);
-    },
-
-    async getUsers(): Promise<void> {
-      const users = await userService.getUsers();
-      console.log(users);
-    }
-  },
 
   async mounted(): Promise<void> {
     const userId = authService.loggedInUser?.id ?? 0;
@@ -115,6 +86,16 @@ export default Vue.extend({
             type: 'time',
             time: {
               unit: 'day'
+            },
+            gridLines: {
+              display: false
+            }
+          }
+        ],
+        yAxes: [
+          {
+            gridLines: {
+              display: false
             }
           }
         ]
