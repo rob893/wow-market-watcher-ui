@@ -8,7 +8,7 @@ import {
   HttpMethod,
   Logger,
   RetryOptions,
-  WoWMarketWatcherServiceHeaders
+  WoWMarketWatcherServiceHeader
 } from '@/models';
 import { Utilities } from './Utilities';
 
@@ -209,18 +209,18 @@ export class HttpInterceptors {
         config.metadata = {};
       }
 
-      if (config.headers[WoWMarketWatcherServiceHeaders.CorrelationId]) {
+      if (config.headers[WoWMarketWatcherServiceHeader.CorrelationId]) {
         logger.debug(
           `${HttpInterceptors.name}.${this.useCorrelationIdInterceptor.name}: Correlation id already attached to request.`
         );
 
-        config.metadata.correlationId = config.headers[WoWMarketWatcherServiceHeaders.CorrelationId];
+        config.metadata.correlationId = config.headers[WoWMarketWatcherServiceHeader.CorrelationId];
 
         return config;
       }
 
-      config.headers[WoWMarketWatcherServiceHeaders.CorrelationId] = uuid();
-      config.metadata.correlationId = config.headers[WoWMarketWatcherServiceHeaders.CorrelationId];
+      config.headers[WoWMarketWatcherServiceHeader.CorrelationId] = uuid();
+      config.metadata.correlationId = config.headers[WoWMarketWatcherServiceHeader.CorrelationId];
 
       logger.info(
         `${HttpInterceptors.name}.${this.useCorrelationIdInterceptor.name}: Correlation id generated and attached to request.`
@@ -297,11 +297,11 @@ export class HttpInterceptors {
 
           if (
             status === HttpStatusCode.Unauthorized &&
-            headers[WoWMarketWatcherServiceHeaders.TokenExpired] &&
+            headers[WoWMarketWatcherServiceHeader.TokenExpired] &&
             !config.metadata?.refreshRetryAttempted
           ) {
             logger.debug(
-              `${HttpInterceptors.name}.${this.useHandleUnauthorizedInterceptor.name}: ${WoWMarketWatcherServiceHeaders.TokenExpired} header present with 401 status code. Attempting to refresh token...`
+              `${HttpInterceptors.name}.${this.useHandleUnauthorizedInterceptor.name}: ${WoWMarketWatcherServiceHeader.TokenExpired} header present with 401 status code. Attempting to refresh token...`
             );
 
             const { token } = await authService.refreshAccessToken();

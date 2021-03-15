@@ -1,48 +1,67 @@
 <template>
-  <div class="about">
-    <h1>This is the Dashboard</h1>
-    <div v-if="chartDatas">
-      <div v-for="({ data, name }, index) in chartDatas" :key="index">
+  <v-container v-if="chartDatas" fluid>
+    <v-row>
+      <v-col cols="12">
+        <v-card elevation="2">
+          <v-card-title>{{ (watchList || {}).name }}</v-card-title>
+          <v-card-text>{{ (watchList || {}).description }}</v-card-text>
+        </v-card>
+      </v-col>
+      <v-col v-for="({ data, name }, index) in chartDatas" :key="index" cols="12">
         <v-card elevation="2">
           <v-card-title>{{ name }}</v-card-title>
+          <v-card-text>
+            <line-chart :chartData="data" :chartOptions="chartOptions" :chartPlugins="chartPlugins" />
+          </v-card-text>
         </v-card>
-        <line-chart :chartData="data" :chartOptions="chartOptions" />
-      </div>
-    </div>
-  </div>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script lang="ts">
-import { auctionTimeSeriesService, authService, watchListService, loggerService } from '@/services';
+import { auctionTimeSeriesService, watchListService, loggerService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
-import Vue from 'vue';
+import Vue, { VueConstructor } from 'vue';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
-import { Comparer } from '@/utilities';
-import { AuctionTimeSeriesEntry, WoWItem } from '@/models';
+import { Comparer, ChartPluginFactory } from '@/utilities';
+import { AuctionTimeSeriesEntry, WatchList, WoWItem } from '@/models';
+import { RouteName } from '@/router/RouteName';
+import { UserMixin } from '@/mixins/UserMixin';
 
-export default Vue.extend({
-  name: 'Dashboard',
+export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
+  name: 'WatchList',
 
   components: {
     LineChart
   },
 
+  mixins: [UserMixin],
+
+  props: {
+    id: {
+      type: String,
+      required: true
+    }
+  },
+
   data: () => ({
+    watchList: undefined as WatchList | undefined,
     chartDatas: undefined as { data: ChartData; name: string }[] | undefined,
-    chartOptions: undefined as ChartOptions | undefined
+    chartOptions: undefined as ChartOptions | undefined,
+    chartPlugins: [ChartPluginFactory.createVerticalLinePlugin()]
   }),
 
   async mounted(): Promise<void> {
-    const userId = authService.loggedInUser?.id ?? 0;
+    const watchList = await watchListService.getWatchListForUser(this.userId, Number(this.id));
 
-    const watchLists = await watchListService.getWatchListsForUser(userId);
-
-    if (watchLists.length === 0) {
-      loggerService.info('No watch lists');
+    if (!watchList) {
+      loggerService.warn(`No watch list found with id ${this.id} for user ${this.userId}`);
+      this.$router.push({ name: RouteName.NotFound });
       return;
     }
 
-    const watchList = watchLists[0];
+    this.watchList = watchList;
 
     const timeSeriesPromises: Promise<AuctionTimeSeriesEntry[]>[] = [];
 

@@ -168,7 +168,7 @@ export default Vue.extend({
           email
         });
         this.errorMessage = null;
-        this.$router.push({ name: RouteName.Dashboard });
+        this.$router.push({ name: RouteName.WatchLists });
       } catch (error) {
         this.errorMessage = 'Something went wrong.';
       } finally {
@@ -188,7 +188,7 @@ export default Vue.extend({
         this.loading = true;
         await authService.registerUserUsingGoogleAccount(username, idToken);
         this.errorMessage = null;
-        this.$router.push({ name: RouteName.Dashboard });
+        this.$router.push({ name: RouteName.WatchLists });
       } catch (error) {
         this.errorMessage = 'Something went wrong.';
       } finally {

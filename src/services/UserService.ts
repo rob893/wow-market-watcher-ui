@@ -3,7 +3,7 @@ import { User } from '@/models/entities';
 import { authService } from './AuthService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
 import { CursorPaginatedResponse } from '@/models/core';
-import { UpdateUserDto } from '@/models/dtos';
+import { UpdateUserRequest } from '@/models/requests';
 import { environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 
@@ -22,7 +22,7 @@ export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
     return data;
   }
 
-  public async updateUser(id: number, fieldsToUpdate: UpdateUserDto): Promise<User> {
+  public async updateUser(id: number, fieldsToUpdate: UpdateUserRequest): Promise<User> {
     const patchDoc = Object.entries(fieldsToUpdate).map(([key, value]) => ({
       op: 'add',
       path: `/${key}`,

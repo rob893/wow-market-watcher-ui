@@ -2,22 +2,17 @@ import Vue from 'vue';
 import VueRouter from 'vue-router';
 import Register from '@/views/Register.vue';
 import Login from '@/views/Login.vue';
-import Dashboard from '@/views/Dashboard.vue';
 import Test from '@/views/Test.vue';
 import WatchLists from '@/views/WatchLists.vue';
+import WatchList from '@/views/WatchList.vue';
+import NotFound from '@/views/NotFound.vue';
 import { authService } from '@/services/AuthService';
 import { RouteName } from './RouteName';
-import { HttpStatusCode } from '@/models';
 
 Vue.use(VueRouter);
 
 const router = new VueRouter({
   routes: [
-    {
-      path: '/dashboard',
-      name: RouteName.Dashboard,
-      component: Dashboard
-    },
     {
       path: '/about',
       name: RouteName.About,
@@ -37,6 +32,12 @@ const router = new VueRouter({
       component: Login
     },
     {
+      path: '/watch-lists/:id',
+      name: RouteName.WatchList,
+      component: WatchList,
+      props: true
+    },
+    {
       path: '/watch-lists',
       name: RouteName.WatchLists,
       component: WatchLists
@@ -47,9 +48,14 @@ const router = new VueRouter({
       component: Test
     },
     {
+      path: '/not-found',
+      name: RouteName.NotFound,
+      component: NotFound
+    },
+    {
       path: '*',
       name: RouteName.Default,
-      component: Dashboard
+      component: WatchLists
     }
   ]
 });
@@ -57,7 +63,8 @@ const router = new VueRouter({
 const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
   RouteName.Login,
   RouteName.About,
-  RouteName.Register
+  RouteName.Register,
+  RouteName.NotFound
 ]);
 
 router.beforeEach((to, _from, next) => {
@@ -68,10 +75,8 @@ router.beforeEach((to, _from, next) => {
   }
 });
 
-authService.unauthorizedActionAttempted.subscribe(statusCode => {
-  if (statusCode === HttpStatusCode.Unauthorized || statusCode === HttpStatusCode.Forbidden) {
-    authService.logout();
-  }
+authService.unauthorizedActionAttempted.subscribe(() => {
+  authService.logout();
 });
 
 authService.authChanged.subscribe(authStatus => {

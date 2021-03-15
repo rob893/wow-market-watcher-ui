@@ -3,7 +3,7 @@ import Vue, { PropType, VueConstructor } from 'vue';
 import colors from 'vuetify/es5/util/colors';
 import { Line } from 'vue-chartjs';
 import { ChartData, ChartOptions } from 'chart.js';
-import { ColorUtilities } from '@/utilities';
+import { ChartPlugin, ColorUtilities } from '@/utilities';
 import { loggerService } from '@/services';
 
 /**
@@ -42,6 +42,11 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
 
         return value.every(v => typeof v === 'string');
       }
+    },
+    chartPlugins: {
+      type: Array as PropType<ChartPlugin[]>,
+      required: false,
+      default: () => []
     }
   },
 
@@ -52,6 +57,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
       loggerService.error('No context found.');
       return;
     }
+
+    this.chartPlugins.forEach(plugin => this.addPlugin(plugin));
 
     const lineColors = this.chartColors ?? [
       colors.red.base,

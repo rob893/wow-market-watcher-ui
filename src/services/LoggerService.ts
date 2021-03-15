@@ -1,4 +1,4 @@
-import { consoleLoggingProvider } from '@/utilities/LoggingProviders/ConsoleLoggingProvider';
+import { consoleLoggingProvider } from '@/utilities/logging-providers/ConsoleLoggingProvider';
 import { Logger, LoggingProvider, LogLevel } from '../models/core';
 
 export class LoggerService implements Logger {

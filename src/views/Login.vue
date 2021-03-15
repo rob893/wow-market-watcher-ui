@@ -93,7 +93,7 @@ export default Vue.extend({
         const idToken = googleUser.getAuthResponse().id_token;
         await authService.loginGoogle(idToken);
         this.errorMessage = null;
-        this.$router.push({ name: RouteName.Dashboard });
+        this.$router.push({ name: RouteName.WatchLists });
       } catch (error) {
         if (TypeGuards.isAxiosError(error) && error.response?.status === 404) {
           this.$router.push({ name: RouteName.Register, query: { socialLogin: LinkedAccountType.Google } });
@@ -117,7 +117,7 @@ export default Vue.extend({
         this.loading = true;
         await authService.login(this.username, this.password);
         this.errorMessage = null;
-        this.$router.push({ name: RouteName.Dashboard });
+        this.$router.push({ name: RouteName.WatchLists });
       } catch (error) {
         if (TypeGuards.isAxiosError(error) && error.response?.status === 401) {
           this.showErrorMessage('Invalid username or password.');

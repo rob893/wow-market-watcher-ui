@@ -22,12 +22,6 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
   ) {
     super(axiosStatic, authService, environmentService, logger);
     this.cache = cache;
-
-    authService.authChanged.subscribe(authStatus => {
-      if (!authStatus) {
-        this.cache.clear();
-      }
-    });
   }
 
   public async getAuctionTimeSeries(
@@ -68,7 +62,7 @@ export const auctionTimeSeriesService = new AuctionTimeSeriesService(
   environmentService,
   new LRUCache({
     maxSize: 100,
-    entryExpirationTimeInMS: 300000
+    entryExpirationTimeInMS: 900000
   }),
   loggerService
 );

@@ -6,7 +6,7 @@ import { LoginResponse, RefreshTokenResponse, RegisterResponse } from '@/models/
 import { LocalStorageService, localStorageService as localStorageServiceInstance } from './LocalStorageService';
 import { User } from '@/models/entities';
 import { WoWMarketWatcherBaseService } from './WoWMarketWatcherBaseService';
-import { Logger, RegisterUserDto } from '@/models';
+import { Logger, RegisterUserRequest } from '@/models';
 import { loggerService } from './LoggerService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
 
@@ -104,7 +104,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
     return this.cachedDeviceId;
   }
 
-  public async registerUser(registerUserDto: RegisterUserDto): Promise<RegisterResponse> {
+  public async registerUser(registerUserDto: RegisterUserRequest): Promise<RegisterResponse> {
     this.logger.debug(`${AuthService.name}.${this.registerUser.name}: Registering user.`);
 
     const { data } = await this.httpClient.post<RegisterResponse>('auth/register', {

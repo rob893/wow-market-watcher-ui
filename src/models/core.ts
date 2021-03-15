@@ -105,7 +105,12 @@ export interface Indexable<TValue = any> {
   [key: string]: TValue;
 }
 
-export enum WoWMarketWatcherServiceHeaders {
+export enum WoWMarketWatcherServiceHeader {
   CorrelationId = 'x-correlation-id',
   TokenExpired = 'x-token-expired'
+}
+
+export enum WoWMarketWatcherEvent {
+  Confirmed = 'confirmed',
+  Canceled = 'canceled'
 }
