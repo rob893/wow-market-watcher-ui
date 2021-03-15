@@ -7,3 +7,5 @@ export * from './GoogleAuthService';
 export * from './LoggerService';
 export * from './EnvironmentService';
 export * from './WatchListService';
+export * from './RealmService';
+export * from './WoWItemService';

@@ -48,3 +48,16 @@ export interface WatchList {
   description?: string;
   watchedItems: WoWItem[];
 }
+
+export interface Realm {
+  id: number;
+  name: string;
+  connectedRealmId: number;
+  isTournament: boolean;
+  locale: string;
+  timezone: string;
+  slug: string;
+  region: string;
+  category: string;
+  type: string;
+}

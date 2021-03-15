@@ -39,6 +39,24 @@
                           ></v-text-field>
                         </v-col>
 
+                        <v-col cols="12" sm="6">
+                          <v-autocomplete
+                            v-model="createNew.selectedConnectedRealmId"
+                            :loading="createNew.realmsLoading"
+                            :items="createNew.realms"
+                            item-text="name"
+                            item-value="id"
+                            :search-input.sync="createNew.realmsSearch"
+                            cache-items
+                            class="mx-4"
+                            flat
+                            hide-no-data
+                            hide-details
+                            label="Realm"
+                            solo-inverted
+                          ></v-autocomplete>
+                        </v-col>
+
                         <v-col cols="12">
                           <v-textarea
                             label="Description"
@@ -98,10 +116,11 @@
 
 <script lang="ts">
 import Vue, { VueConstructor } from 'vue';
+import { throttle } from 'lodash';
 import { UserMixin } from '@/mixins/UserMixin';
-import { CreateWatchListForUserRequest, User, WatchList } from '@/models';
+import { CreateWatchListForUserRequest, Realm, User, WatchList } from '@/models';
 import { RouteName } from '@/router/RouteName';
-import { watchListService } from '@/services';
+import { realmService, watchListService } from '@/services';
 import { Utilities } from '@/utilities';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
@@ -116,6 +135,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     stagedWatchListToDelete: null as WatchList | null,
     createNew: {
       loading: false,
+      selectedConnectedRealmId: null as number | null,
+      realms: [] as Realm[],
+      realmsLoading: false,
+      realmsSearch: null as string | null,
       formValid: false,
       showDialog: false,
       nameRules: [(name: string) => !!name || 'Name is required'],
@@ -150,13 +173,13 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     async createWatchList(): Promise<void> {
-      const { watchListToCreate } = this.createNew;
+      const { watchListToCreate, selectedConnectedRealmId } = this.createNew;
 
-      if (Utilities.isEmptyObject(watchListToCreate)) {
+      if (Utilities.isEmptyObject(watchListToCreate) || !selectedConnectedRealmId) {
         return;
       }
 
-      watchListToCreate.connectedRealmId = 76;
+      watchListToCreate.connectedRealmId = selectedConnectedRealmId;
 
       try {
         this.createNew.loading = true;
@@ -165,6 +188,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       } catch (error) {
         console.error(error);
       } finally {
+        this.createNew.selectedConnectedRealmId = null;
+        this.createNew.realmsSearch = null;
         this.createNew.loading = false;
         this.createNew.showDialog = false;
         this.resetCreateWatchListForm();
@@ -173,6 +198,37 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
     resetCreateWatchListForm(): void {
       (this.$refs.createWatchListForm as any).reset();
+    },
+
+    async searchRealms(searchTerm: string): Promise<void> {
+      this.createNew.realmsLoading = true;
+
+      try {
+        this.createNew.realms = await realmService.getRealms({ nameLike: searchTerm });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.createNew.realmsLoading = false;
+      }
+    },
+
+    // Must use 'function' syntax for correct 'this' binding
+    throttledSearchRealms: throttle(function (
+      this: Vue & { searchRealms(searchTerm: string): Promise<void> },
+      newValue: string
+    ): void {
+      this.searchRealms(newValue);
+    },
+    1000)
+  },
+
+  watch: {
+    'createNew.realmsSearch'(newValue: string | null): void {
+      if (!newValue) {
+        return;
+      }
+
+      this.throttledSearchRealms(newValue);
     }
   },
 

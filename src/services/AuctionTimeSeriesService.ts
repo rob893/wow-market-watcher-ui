@@ -11,7 +11,7 @@ import { AuctionTimeSeriesQueryParameters } from '@/models/queryParameters';
 import { ArrayUtilities } from '@/utilities';
 
 export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseService {
-  private readonly cache: LRUCache;
+  private readonly cache: LRUCache<string, AuctionTimeSeriesEntry[]>;
 
   public constructor(
     axiosStatic: AxiosStatic,
