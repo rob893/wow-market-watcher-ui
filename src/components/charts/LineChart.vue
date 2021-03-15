@@ -1,8 +1,8 @@
 <script lang="ts">
 import Vue, { PropType, VueConstructor } from 'vue';
 import colors from 'vuetify/es5/util/colors';
-import { Line } from 'vue-chartjs';
-import { ChartData, ChartOptions } from 'chart.js';
+import { Line, mixins } from 'vue-chartjs';
+import { ChartOptions } from 'chart.js';
 import { ChartPlugin, ColorUtilities } from '@/utilities';
 import { loggerService } from '@/services';
 
@@ -15,15 +15,15 @@ import { loggerService } from '@/services';
  * And the template is included in the mixin. If you leave the template tag in your component, it will overwrite the one which comes from the base chart and you will have a blank screen.
  */
 
-export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
+const { reactiveProp } = mixins;
+
+export default (Vue as VueConstructor<Vue & InstanceType<typeof Line> & InstanceType<typeof reactiveProp>>).extend({
   name: 'LineChart',
   extends: Line,
 
+  mixins: [reactiveProp],
+
   props: {
-    chartData: {
-      type: Object as PropType<ChartData>,
-      required: true
-    },
     chartOptions: {
       type: Object as PropType<ChartOptions>,
       default: () => ({
@@ -81,6 +81,19 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line>>).extend({
     });
 
     this.renderChart(this.chartData, this.chartOptions);
+
+    this.$on('chart:update', () => {
+      this.chartData.datasets?.forEach((set, i) => {
+        const { gradient, color } = ColorUtilities.getColorGradient(lineColors[i % lineColors.length], context);
+
+        set.backgroundColor ??= gradient;
+        set.borderColor ??= color;
+        set.borderWidth ??= 1;
+        set.fill ??= true;
+      });
+
+      this.renderChart(this.chartData, this.chartOptions);
+    });
   }
 });
 </script>
