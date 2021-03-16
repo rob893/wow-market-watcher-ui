@@ -2,7 +2,7 @@ import axios from 'axios';
 import { User } from '@/models/entities';
 import { authService } from './AuthService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
-import { CursorPaginatedResponse } from '@/models/core';
+import { CursorPaginatedResponse, JSONPatchDocument } from '@/models/core';
 import { UpdateUserRequest } from '@/models/requests';
 import { environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
@@ -23,19 +23,19 @@ export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
   }
 
   public async updateUser(id: number, fieldsToUpdate: UpdateUserRequest): Promise<User> {
-    const patchDoc = Object.entries(fieldsToUpdate).map(([key, value]) => ({
+    const patchDoc: JSONPatchDocument[] = Object.entries(fieldsToUpdate).map(([key, value]) => ({
       op: 'add',
       path: `/${key}`,
       value
     }));
 
-    const { data } = await this.httpClient.patch<User>(`users/${id}`, patchDoc);
+    const { data } = await this.patch<User>(`users/${id}`, patchDoc);
 
     return data;
   }
 
   public async test(status: number, delay: number = 0, statusAfter: number = 200, per: number = 0): Promise<unknown> {
-    const { data } = await this.httpClient.get<unknown>(
+    const { data } = await this.get<unknown>(
       `test?status=${status}&delay=${delay}&statusAfter=${statusAfter}&per=${per}`
     );
 

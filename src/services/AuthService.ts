@@ -202,13 +202,13 @@ export class AuthService extends WoWMarketWatcherBaseService {
   public async refreshAccessToken(): Promise<RefreshTokenResponse> {
     this.logger.debug(`${AuthService.name}.${this.refreshAccessToken.name}: Refreshing access token.`);
 
-    const result = await this.httpClient.post<RefreshTokenResponse>('auth/refreshToken', {
+    const { data } = await this.post<RefreshTokenResponse>('auth/refreshToken', {
       token: this.accessToken,
       refreshToken: this.refreshToken,
       deviceId: this.deviceId
     });
 
-    const { token, refreshToken } = result.data;
+    const { token, refreshToken } = data;
 
     this.cachedAccessToken = token;
     this.cachedRefreshToken = refreshToken;
@@ -218,7 +218,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
 
     this.logger.info(`${AuthService.name}.${this.refreshAccessToken.name}: Access token refreshed.`);
 
-    return result.data;
+    return data;
   }
 
   public isTokenExpired(token: string, expOffsetInSeconds: number = 300): boolean {
