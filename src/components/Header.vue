@@ -69,7 +69,11 @@
 
     <v-app-bar app clipped-left>
       <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
-      <v-toolbar-title>{{ title }}</v-toolbar-title>
+      <router-link class="toolbar-title" to="/">
+        <v-toolbar-title>
+          {{ title }}
+        </v-toolbar-title>
+      </router-link>
     </v-app-bar>
 
     <v-dialog width="500" v-model="showSettings">
@@ -138,3 +142,10 @@ export default Vue.extend({
   }
 });
 </script>
+
+<style scoped>
+.toolbar-title {
+  color: inherit;
+  text-decoration: inherit;
+}
+</style>

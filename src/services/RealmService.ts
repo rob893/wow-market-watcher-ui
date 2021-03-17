@@ -40,7 +40,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     const {
       data: { nodes = [] }
-    } = await this.httpClient.get<CursorPaginatedResponse<Realm>>(url);
+    } = await this.get<CursorPaginatedResponse<Realm>>(url);
 
     this.cache.set(url, nodes);
 
@@ -60,7 +60,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
       return cachedEntry;
     }
 
-    const { data } = await this.httpClient.get<Realm | null>(url);
+    const { data } = await this.get<Realm | null>(url);
 
     if (data) {
       this.cache.set(url, data);
@@ -75,7 +75,7 @@ export const realmService = new RealmService(
   authService,
   environmentService,
   new LRUCache({
-    maxSize: 100
+    maxSize: 25
   }),
   loggerService
 );

@@ -36,7 +36,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
 
     const {
       data: { nodes = [] }
-    } = await this.httpClient.get<CursorPaginatedResponse<WatchList>>(`users/${userId}/watchLists`);
+    } = await this.get<CursorPaginatedResponse<WatchList>>(`users/${userId}/watchLists`);
 
     this.cache.set(cacheKey, nodes);
 
@@ -59,7 +59,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
       }
     }
 
-    const { data } = await this.httpClient.get<WatchList | null>(`users/${userId}/watchLists/${watchListId}`);
+    const { data } = await this.get<WatchList | null>(`users/${userId}/watchLists/${watchListId}`);
 
     if (data) {
       this.cache.set(cacheKey, data);
@@ -72,7 +72,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
     userId: number,
     createWatchListRequest: CreateWatchListForUserRequest
   ): Promise<WatchList> {
-    const { data } = await this.httpClient.post<WatchList>(`users/${userId}/watchLists`, createWatchListRequest);
+    const { data } = await this.post<WatchList>(`users/${userId}/watchLists`, createWatchListRequest);
 
     const newWatchListCacheKey = this.getWatchListCacheKey(data.id);
     const userWatchListsCacheKey = this.getUserWatchListsCacheKey(userId);
@@ -97,10 +97,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
     watchListId: number,
     addItemRequest: AddItemToWatchListRequest
   ): Promise<WatchList> {
-    const { data } = await this.httpClient.post<WatchList>(
-      `users/${userId}/watchLists/${watchListId}/items`,
-      addItemRequest
-    );
+    const { data } = await this.post<WatchList>(`users/${userId}/watchLists/${watchListId}/items`, addItemRequest);
 
     this.cache.set(this.getWatchListCacheKey(watchListId), data);
 
@@ -118,7 +115,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
       value
     }));
 
-    const { data } = await this.httpClient.patch<WatchList>(`users/${userId}/watchLists/${watchListId}`, patchDoc);
+    const { data } = await this.patch<WatchList>(`users/${userId}/watchLists/${watchListId}`, patchDoc);
 
     this.cache.set(this.getWatchListCacheKey(watchListId), data);
 
@@ -126,7 +123,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   }
 
   public async deleteWatchListForUser(userId: number, watchListId: number): Promise<void> {
-    await this.httpClient.delete(`users/${userId}/watchLists/${watchListId}`);
+    await this.delete(`users/${userId}/watchLists/${watchListId}`);
     this.cache.delete(this.getWatchListCacheKey(watchListId));
 
     const cacheKey = this.getUserWatchListsCacheKey(userId);
@@ -145,9 +142,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   }
 
   public async deleteItemFromWatchListForUser(userId: number, watchListId: number, itemId: number): Promise<void> {
-    const { data } = await this.httpClient.delete<WatchList>(
-      `users/${userId}/watchLists/${watchListId}/items/${itemId}`
-    );
+    const { data } = await this.delete<WatchList>(`users/${userId}/watchLists/${watchListId}/items/${itemId}`);
 
     this.cache.set(this.getWatchListCacheKey(watchListId), data);
 

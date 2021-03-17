@@ -10,14 +10,14 @@ import { loggerService } from './LoggerService';
 export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
   public async getUsers(): Promise<User[]> {
     const {
-      data: { nodes }
-    } = await this.httpClient.get<CursorPaginatedResponse<User>>('users');
+      data: { nodes = [] }
+    } = await this.get<CursorPaginatedResponse<User>>('users');
 
-    return nodes ?? [];
+    return nodes;
   }
 
   public async getUser(id: number): Promise<User | null> {
-    const { data } = await this.httpClient.get<User | null>(`users/${id}`);
+    const { data } = await this.get<User | null>(`users/${id}`);
 
     return data;
   }

@@ -44,7 +44,7 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
 
     const {
       data: { nodes = [] }
-    } = await this.httpClient.get<CursorPaginatedResponse<AuctionTimeSeriesEntry>>(url);
+    } = await this.get<CursorPaginatedResponse<AuctionTimeSeriesEntry>>(url);
 
     this.cache.set(url, nodes, { onEntryEvicted: ({ key }) => this.logger.info(`Entry with key ${key} has expired.`) });
 

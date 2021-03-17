@@ -43,7 +43,7 @@ export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
 
     const {
       data: { nodes = [] }
-    } = await this.httpClient.get<CursorPaginatedResponse<WoWItem>>(url);
+    } = await this.get<CursorPaginatedResponse<WoWItem>>(url);
 
     this.cache.set(url, nodes);
 
@@ -63,7 +63,7 @@ export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
       return cachedEntry;
     }
 
-    const { data } = await this.httpClient.get<WoWItem | null>(url);
+    const { data } = await this.get<WoWItem | null>(url);
 
     if (data) {
       this.cache.set(url, data);

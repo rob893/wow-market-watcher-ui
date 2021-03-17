@@ -148,13 +148,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               {
                 label: 'Average',
                 data: mapped.average,
-                pointRadius: 0
+                pointRadius: 0,
+                hidden: true
               },
               {
                 label: 'Min',
                 data: mapped.min,
                 pointRadius: 0,
-                hidden: true
+                hidden: false
               },
               {
                 label: 'Max',
@@ -171,13 +172,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               {
                 label: '50th Percentile',
                 data: mapped.price50,
-                pointRadius: 0
+                pointRadius: 0,
+                hidden: false
               },
               {
                 label: '75th Percentile',
                 data: mapped.price75,
                 pointRadius: 0,
-                hidden: true
+                hidden: false
               },
               {
                 label: '95th Percentile',

@@ -107,7 +107,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
   public async registerUser(registerUserDto: RegisterUserRequest): Promise<RegisterResponse> {
     this.logger.debug(`${AuthService.name}.${this.registerUser.name}: Registering user.`);
 
-    const { data } = await this.httpClient.post<RegisterResponse>('auth/register', {
+    const { data } = await this.post<RegisterResponse>('auth/register', {
       ...registerUserDto,
       deviceId: this.deviceId
     });
@@ -124,7 +124,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
       `${AuthService.name}.${this.registerUserUsingGoogleAccount.name}: Registering user using Google account.`
     );
 
-    const { data } = await this.httpClient.post<RegisterResponse>('auth/register/google', {
+    const { data } = await this.post<RegisterResponse>('auth/register/google', {
       username,
       idToken,
       deviceId: this.deviceId
@@ -142,7 +142,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
   public async login(username: string, password: string): Promise<LoginResponse> {
     this.logger.debug(`${AuthService.name}.${this.login.name}: Logging the user in.`);
 
-    const { data } = await this.httpClient.post<LoginResponse>('auth/login', {
+    const { data } = await this.post<LoginResponse>('auth/login', {
       username,
       password,
       deviceId: this.deviceId
@@ -158,7 +158,7 @@ export class AuthService extends WoWMarketWatcherBaseService {
   public async loginGoogle(idToken: string): Promise<LoginResponse> {
     this.logger.debug(`${AuthService.name}.${this.loginGoogle.name}: Logging the user in using Google.`);
 
-    const { data } = await this.httpClient.post<LoginResponse>('auth/login/google', {
+    const { data } = await this.post<LoginResponse>('auth/login/google', {
       idToken,
       deviceId: this.deviceId
     });
