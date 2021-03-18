@@ -61,3 +61,8 @@ export interface Realm {
   category: string;
   type: string;
 }
+
+export interface ConnectedRealm {
+  id: number;
+  realms: Realm[];
+}
