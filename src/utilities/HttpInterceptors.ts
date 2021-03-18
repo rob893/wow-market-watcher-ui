@@ -36,7 +36,7 @@ export class HttpInterceptors {
           error
         );
 
-        Promise.reject(error);
+        return Promise.reject(error);
       }
     );
 

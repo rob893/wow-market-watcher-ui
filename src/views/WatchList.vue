@@ -2,12 +2,22 @@
   <v-container v-if="chartDatas" fluid>
     <v-row>
       <v-col cols="12">
-        <v-card elevation="2">
-          <v-card-title>{{ (watchList || {}).name }}</v-card-title>
-          <v-card-text>{{ (watchList || {}).description }}</v-card-text>
+        <v-card v-if="watchList" elevation="2">
+          <v-card-title>{{ watchList.name }}</v-card-title>
+          <v-card-text>
+            {{ watchList.description }}
+            <br />
+            {{
+              `Realm${watchList.realms.length > 1 ? 's' : ''}: ${watchList.realms.reduce(
+                (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
+              )}`
+            }}
+          </v-card-text>
           <v-card-actions>
-            <v-btn @click="useMonthTimeRange">Month</v-btn>
-            <v-btn @click="useWeekTimeRange">Week</v-btn>
+            <v-btn-toggle v-model="timeFrame" group>
+              <v-btn value="week" @click="useWeekTimeRange">Week</v-btn>
+              <v-btn value="month" @click="useMonthTimeRange">Month</v-btn>
+            </v-btn-toggle>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -24,7 +34,7 @@
 </template>
 
 <script lang="ts">
-import { auctionTimeSeriesService, watchListService, loggerService } from '@/services';
+import { auctionTimeSeriesService, watchListService, loggerService, realmService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
@@ -50,7 +60,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   data: () => ({
-    watchList: undefined as WatchList | undefined,
+    watchList: undefined as (WatchList & { realms: string[] }) | undefined,
     chartDatas: undefined as { data: ChartData; name: string }[] | undefined,
     timeseries: [] as AuctionTimeSeriesEntry[][],
     chartOptions: {
@@ -85,7 +95,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     } as ChartOptions,
     chartPlugins: [ChartPluginFactory.createVerticalLinePlugin()],
-    wowItems: new Map<number, WoWItem>()
+    wowItems: new Map<number, WoWItem>(),
+    timeFrame: 'week'
   }),
 
   methods: {
@@ -211,7 +222,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return;
     }
 
-    this.watchList = watchList;
+    const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
+
+    if (!connectedRealm) {
+      loggerService.warn(
+        `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
+      );
+    }
+
+    this.watchList = { ...watchList, realms: connectedRealm?.realms.map(r => r.name) ?? [] };
 
     const timeSeriesPromises: Promise<AuctionTimeSeriesEntry[]>[] = [];
 

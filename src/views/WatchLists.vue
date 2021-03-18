@@ -42,18 +42,13 @@
                         <v-col cols="12" sm="6">
                           <v-autocomplete
                             v-model="createNew.selectedConnectedRealmId"
-                            :loading="createNew.realmsLoading"
-                            :items="createNew.realms"
+                            :items="realms"
                             item-text="name"
-                            item-value="id"
-                            :search-input.sync="createNew.realmsSearch"
-                            cache-items
+                            item-value="connectedRealmId"
                             class="mx-4"
-                            flat
                             hide-no-data
                             hide-details
                             label="Realm"
-                            solo-inverted
                           ></v-autocomplete>
                         </v-col>
 
@@ -96,7 +91,15 @@
       <v-col v-for="list in watchLists" :key="list.id" cols="12" lg="6">
         <v-card>
           <v-card-title>{{ list.name }}</v-card-title>
-          <v-card-text>{{ list.description }}</v-card-text>
+          <v-card-text>
+            {{ list.description }}
+            <br />
+            {{
+              `Realm${list.realms.length > 1 ? 's' : ''}: ${list.realms.reduce(
+                (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
+              )}`
+            }}
+          </v-card-text>
           <v-card-actions>
             <v-btn @click="goToWatchList(list.id)">Details</v-btn>
             <v-btn
@@ -116,9 +119,8 @@
 
 <script lang="ts">
 import Vue, { VueConstructor } from 'vue';
-import { throttle } from 'lodash';
 import { UserMixin } from '@/mixins/UserMixin';
-import { CreateWatchListForUserRequest, Realm, User, WatchList } from '@/models';
+import { ConnectedRealm, CreateWatchListForUserRequest, Realm, User, WatchList } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { realmService, watchListService } from '@/services';
 import { Utilities } from '@/utilities';
@@ -130,15 +132,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
   data: () => ({
     user: {} as User,
-    watchLists: [] as WatchList[],
+    watchLists: [] as (WatchList & { realms: string[] })[],
     showDeleteDialog: false,
     stagedWatchListToDelete: null as WatchList | null,
+    realms: [] as Realm[],
+    realmsLookup: new Map<number, Realm>(),
+    connectedRealms: new Map<number, ConnectedRealm>(),
     createNew: {
       loading: false,
       selectedConnectedRealmId: null as number | null,
-      realms: [] as Realm[],
-      realmsLoading: false,
-      realmsSearch: null as string | null,
       formValid: false,
       showDialog: false,
       nameRules: [(name: string) => !!name || 'Name is required'],
@@ -184,12 +186,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       try {
         this.createNew.loading = true;
         const newWatchList = await watchListService.createWatchListForUser(this.userId, watchListToCreate);
-        this.watchLists.push(newWatchList);
+        this.watchLists.push({
+          ...newWatchList,
+          realms: this.connectedRealms.get(newWatchList.connectedRealmId)?.realms.map(r => r.name) ?? []
+        });
       } catch (error) {
         console.error(error);
       } finally {
         this.createNew.selectedConnectedRealmId = null;
-        this.createNew.realmsSearch = null;
+        //this.createNew.realmsSearch = null;
         this.createNew.loading = false;
         this.createNew.showDialog = false;
         this.resetCreateWatchListForm();
@@ -198,44 +203,59 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
     resetCreateWatchListForm(): void {
       (this.$refs.createWatchListForm as any).reset();
-    },
-
-    async searchRealms(searchTerm: string): Promise<void> {
-      this.createNew.realmsLoading = true;
-
-      try {
-        this.createNew.realms = await realmService.getRealms({ nameLike: searchTerm });
-      } catch (error) {
-        console.error(error);
-      } finally {
-        this.createNew.realmsLoading = false;
-      }
-    },
-
-    // Must use 'function' syntax for correct 'this' binding
-    throttledSearchRealms: throttle(function (
-      this: Vue & { searchRealms(searchTerm: string): Promise<void> },
-      newValue: string
-    ): void {
-      this.searchRealms(newValue);
-    },
-    1000)
-  },
-
-  watch: {
-    'createNew.realmsSearch'(newValue: string | null): void {
-      if (!newValue) {
-        return;
-      }
-
-      this.throttledSearchRealms(newValue);
     }
+
+    //   async searchRealms(searchTerm: string): Promise<void> {
+    //     this.createNew.realmsLoading = true;
+
+    //     try {
+    //       this.createNew.realms = await realmService.getRealms({ nameLike: searchTerm });
+    //     } catch (error) {
+    //       console.error(error);
+    //     } finally {
+    //       this.createNew.realmsLoading = false;
+    //     }
+    //   },
+
+    //   // Must use 'function' syntax for correct 'this' binding
+    //   throttledSearchRealms: throttle(function (
+    //     this: Vue & { searchRealms(searchTerm: string): Promise<void> },
+    //     newValue: string
+    //   ): void {
+    //     this.searchRealms(newValue);
+    //   },
+    //   1000)
+    // },
+
+    // watch: {
+    //   'createNew.realmsSearch'(newValue: string | null): void {
+    //     if (!newValue) {
+    //       return;
+    //     }
+
+    //     this.throttledSearchRealms(newValue);
+    //   }
+    // },
   },
 
   async mounted(): Promise<void> {
+    const realmsPromise = realmService.getConnectedRealms();
     const watchLists = await watchListService.getWatchListsForUser(this.userId);
+    const realms = await realmsPromise;
 
-    this.watchLists = watchLists;
+    for (const connectedRealm of realms) {
+      this.connectedRealms.set(connectedRealm.id, connectedRealm);
+
+      for (const realm of connectedRealm.realms) {
+        this.realmsLookup.set(realm.id, realm);
+        this.realms.push(realm);
+      }
+    }
+
+    this.watchLists = watchLists.map(wl => ({
+      ...wl,
+      realms: this.connectedRealms.get(wl.connectedRealmId)?.realms.map(r => r.name) ?? []
+    }));
   }
 });
 </script>
