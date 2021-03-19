@@ -36,13 +36,11 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isRealmArray(cachedEntry)) {
-        const clone = cloneDeep(cachedEntry);
-
         if (orderByOptions) {
-          ArrayUtilities.orderBy(clone, orderByOptions);
+          ArrayUtilities.orderBy(cachedEntry, orderByOptions);
         }
 
-        return clone;
+        return cachedEntry;
       } else {
         this.cache.delete(url);
       }
@@ -58,13 +56,11 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
       this.cache.set(this.getRealmCacheKey(realm.id), realm);
     }
 
-    const clone = cloneDeep(nodes);
-
     if (orderByOptions) {
-      ArrayUtilities.orderBy(clone, orderByOptions);
+      ArrayUtilities.orderBy(nodes, orderByOptions);
     }
 
-    return clone;
+    return nodes;
   }
 
   public async getRealm(realmId: number): Promise<Realm | null> {
@@ -74,7 +70,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isRealm(cachedEntry)) {
-        return cloneDeep(cachedEntry);
+        return cachedEntry;
       } else {
         this.cache.delete(cacheKey);
       }
@@ -101,13 +97,11 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isConnectedRealmArray(cachedEntry)) {
-        const clone = cloneDeep(cachedEntry);
-
         if (orderByOptions) {
-          ArrayUtilities.orderBy(clone, orderByOptions);
+          ArrayUtilities.orderBy(cachedEntry, orderByOptions);
         }
 
-        return clone;
+        return cachedEntry;
       } else {
         this.cache.delete(url);
       }
@@ -127,13 +121,11 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
       }
     }
 
-    const clone = cloneDeep(nodes);
-
     if (orderByOptions) {
-      ArrayUtilities.orderBy(clone, orderByOptions);
+      ArrayUtilities.orderBy(nodes, orderByOptions);
     }
 
-    return clone;
+    return nodes;
   }
 
   public async getConnectedRealm(realmId: number): Promise<ConnectedRealm | null> {
@@ -143,7 +135,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isConnectedRealm(cachedEntry)) {
-        return cloneDeep(cachedEntry);
+        return cachedEntry;
       } else {
         this.cache.delete(cacheKey);
       }
@@ -172,7 +164,9 @@ export const realmService = new RealmService(
   authService,
   environmentService,
   new LRUCache({
-    maxSize: 500
+    maxSize: 500,
+    clone: true,
+    cloneFn: cloneDeep
   }),
   loggerService
 );

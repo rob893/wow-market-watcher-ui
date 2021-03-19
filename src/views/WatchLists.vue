@@ -41,10 +41,10 @@
 
                         <v-col cols="12" sm="6">
                           <v-autocomplete
-                            v-model="createNew.selectedConnectedRealmId"
+                            v-model="createNew.selectedRealmId"
                             :items="realms"
                             item-text="name"
-                            item-value="connectedRealmId"
+                            item-value="id"
                             class="mx-4"
                             hide-no-data
                             hide-details
@@ -140,7 +140,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     connectedRealms: new Map<number, ConnectedRealm>(),
     createNew: {
       loading: false,
-      selectedConnectedRealmId: null as number | null,
+      selectedRealmId: null as number | null,
       formValid: false,
       showDialog: false,
       nameRules: [(name: string) => !!name || 'Name is required'],
@@ -175,13 +175,19 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     async createWatchList(): Promise<void> {
-      const { watchListToCreate, selectedConnectedRealmId } = this.createNew;
+      const { watchListToCreate, selectedRealmId } = this.createNew;
 
-      if (Utilities.isEmptyObject(watchListToCreate) || !selectedConnectedRealmId) {
+      if (Utilities.isEmptyObject(watchListToCreate) || !selectedRealmId) {
         return;
       }
 
-      watchListToCreate.connectedRealmId = selectedConnectedRealmId;
+      const selectedRealm = this.realmsLookup.get(selectedRealmId);
+
+      if (!selectedRealm) {
+        return;
+      }
+
+      watchListToCreate.connectedRealmId = selectedRealm.connectedRealmId;
 
       try {
         this.createNew.loading = true;
@@ -193,7 +199,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       } catch (error) {
         console.error(error);
       } finally {
-        this.createNew.selectedConnectedRealmId = null;
+        this.createNew.selectedRealmId = null;
         //this.createNew.realmsSearch = null;
         this.createNew.loading = false;
         this.createNew.showDialog = false;
@@ -241,9 +247,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   async mounted(): Promise<void> {
     const realmsPromise = realmService.getConnectedRealms();
     const watchLists = await watchListService.getWatchListsForUser(this.userId);
-    const realms = await realmsPromise;
+    const connectedRealms = await realmsPromise;
 
-    for (const connectedRealm of realms) {
+    for (const connectedRealm of connectedRealms) {
       this.connectedRealms.set(connectedRealm.id, connectedRealm);
 
       for (const realm of connectedRealm.realms) {
@@ -252,6 +258,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     }
 
+    this.realms.sort((a, b) => {
+      if (a.name < b.name) {
+        return -1;
+      } else if (a.name > b.name) {
+        return 1;
+      }
+
+      return 0;
+    });
     this.watchLists = watchLists.map(wl => ({
       ...wl,
       realms: this.connectedRealms.get(wl.connectedRealmId)?.realms.map(r => r.name) ?? []

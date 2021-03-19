@@ -21,7 +21,7 @@
     "query-string": "^7.0.0",
     "register-service-worker": "^1.7.2",
     "rxjs": "^6.6.6",
-    "typescript-lru-cache": "^1.1.1",
+    "typescript-lru-cache": "^1.2.0",
     "uuid": "^8.3.2",
     "vue": "^2.6.11",
     "vue-chartjs": "^3.5.1",
@@ -54,7 +54,7 @@
     "sass": "^1.32.8",
     "sass-loader": "^10.1.0",
     "typescript": "^4.2.3",
-    "vue-cli-plugin-vuetify": "^2.2.2",
+    "vue-cli-plugin-vuetify": "^2.3.0",
     "vue-template-compiler": "^2.6.11",
     "vuetify-loader": "^1.7.2"
   }

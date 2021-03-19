@@ -7,6 +7,7 @@ import { EnvironmentService, environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 import { AddItemToWatchListRequest, CreateWatchListForUserRequest, UpdateWatchListRequest } from '@/models';
 import { LRUCache } from 'typescript-lru-cache';
+import { cloneDeep } from 'lodash';
 
 export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, WatchList | WatchList[]>;
@@ -172,7 +173,9 @@ export const watchListService = new WatchListService(
   authService,
   environmentService,
   new LRUCache({
-    maxSize: 100
+    maxSize: 100,
+    clone: true,
+    cloneFn: cloneDeep
   }),
   loggerService
 );

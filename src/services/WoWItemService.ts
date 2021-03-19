@@ -8,6 +8,7 @@ import { loggerService } from './LoggerService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
 import { WoWItemQueryParameters } from '@/models/queryParameters';
 import { ArrayUtilities } from '@/utilities';
+import { cloneDeep } from 'lodash';
 
 export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, WoWItem | WoWItem[]>;
@@ -78,7 +79,9 @@ export const wowItemService = new WoWItemService(
   authService,
   environmentService,
   new LRUCache({
-    maxSize: 100
+    maxSize: 100,
+    clone: true,
+    cloneFn: cloneDeep
   }),
   loggerService
 );
