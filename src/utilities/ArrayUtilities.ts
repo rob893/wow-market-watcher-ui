@@ -12,6 +12,33 @@ export class ArrayUtilities {
     return false;
   }
 
+  public static removeRange<T>(arr: T[], items: T[]): boolean {
+    let success = false;
+
+    items.forEach(item => {
+      success = this.removeItem(arr, item);
+    });
+
+    return success;
+  }
+
+  public static removeWhere<T>(arr: T[], condition: (item: T) => boolean): boolean {
+    let success = false;
+    const itemsToRemove: T[] = [];
+
+    arr.forEach(item => {
+      if (condition(item)) {
+        itemsToRemove.push(item);
+      }
+    });
+
+    itemsToRemove.forEach(item => {
+      success = this.removeItem(arr, item);
+    });
+
+    return success;
+  }
+
   public static orderBy<T>(array: T[], orderByOptions: OrderByOptions<T>): T[] {
     const { orderBy, comparer, direction } = orderByOptions;
 

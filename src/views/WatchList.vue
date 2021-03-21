@@ -8,24 +8,67 @@
             {{ watchList.description }}
             <br />
             {{
-              `Realm${watchList.realms.length > 1 ? 's' : ''}: ${watchList.realms.reduce(
+              `Realm${watchListRealms.length > 1 ? 's' : ''}: ${watchListRealms.reduce(
                 (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
               )}`
             }}
           </v-card-text>
           <v-card-actions>
-            <v-btn-toggle v-model="timeFrame" group>
-              <v-btn value="week" @click="useWeekTimeRange">Week</v-btn>
-              <v-btn value="month" @click="useMonthTimeRange">Month</v-btn>
-            </v-btn-toggle>
+            <v-row>
+              <v-col>
+                <v-btn-toggle v-model="timeFrame" group>
+                  <v-btn value="week" @click="useWeekTimeRange">Week</v-btn>
+                  <v-btn value="twoWeeks" @click="useTwoWeekTimeRange">Two Weeks</v-btn>
+                  <v-btn value="month" @click="useMonthTimeRange">Month</v-btn>
+                </v-btn-toggle>
+              </v-col>
+
+              <v-spacer />
+
+              <v-col>
+                <v-autocomplete
+                  v-model="selectedItemId"
+                  :items="items"
+                  :loading="itemsLoading"
+                  :search-input.sync="itemsSearchTerm"
+                  cache-items
+                  item-text="name"
+                  item-value="id"
+                  class="mx-4"
+                  hide-no-data
+                  hide-details
+                  label="Items"
+                ></v-autocomplete>
+              </v-col>
+
+              <v-col>
+                <v-btn color="success" @click="addSelectedItemToWatchList" :disabled="selectedItemId === null"
+                  >Add Item</v-btn
+                >
+              </v-col>
+            </v-row>
           </v-card-actions>
         </v-card>
       </v-col>
-      <v-col v-for="({ data, name }, index) in chartDatas" :key="index" cols="12">
+      <v-col v-for="{ data, name, id } in chartDatas" :key="id" cols="12">
         <v-card elevation="2">
-          <v-card-title>{{ name }}</v-card-title>
+          <v-card-title
+            >{{ name }}<v-spacer /><v-btn color="error" @click="removeItemFromWatchList(id)"
+              >Remove</v-btn
+            ></v-card-title
+          >
           <v-card-text>
-            <line-chart :chartData="data" :chartOptions="chartOptions" :chartPlugins="chartPlugins" />
+            <line-chart
+              v-if="
+                data.datasets &&
+                data.datasets.length > 0 &&
+                data.datasets.some(set => Array.isArray(set.data) && set.data.length > 1)
+              "
+              :chartData="data"
+              :chartOptions="chartOptions"
+              :chartPlugins="chartPlugins"
+            />
+            <p v-else>Not enough data yet for this item. Please check back later!</p>
           </v-card-text>
         </v-card>
       </v-col>
@@ -34,14 +77,17 @@
 </template>
 
 <script lang="ts">
-import { auctionTimeSeriesService, watchListService, loggerService, realmService } from '@/services';
+import { auctionTimeSeriesService, watchListService, loggerService, realmService, wowItemService } from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
+import { debounce } from 'lodash';
 import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
-import { Comparer, ChartPluginFactory } from '@/utilities';
+import { Comparer, ChartPluginFactory, ArrayUtilities } from '@/utilities';
 import { AuctionTimeSeriesEntry, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
+
+type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'WatchList',
@@ -60,9 +106,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   data: () => ({
-    watchList: undefined as (WatchList & { realms: string[] }) | undefined,
-    chartDatas: undefined as { data: ChartData; name: string }[] | undefined,
-    timeseries: [] as AuctionTimeSeriesEntry[][],
+    watchList: undefined as WatchList | undefined,
+    watchListRealms: [] as string[],
+    chartDatas: undefined as { data: ChartData; name: string; id: number }[] | undefined,
     chartOptions: {
       responsive: true,
       maintainAspectRatio: false,
@@ -96,7 +142,12 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     } as ChartOptions,
     chartPlugins: [ChartPluginFactory.createVerticalLinePlugin()],
     wowItems: new Map<number, WoWItem>(),
-    timeFrame: 'week'
+    itemTimeseries: new Map<number, AuctionTimeSeriesEntry[]>(),
+    timeFrame: 'week' as ChartTimeFrame,
+    itemsLoading: false,
+    items: [] as WoWItem[],
+    itemsSearchTerm: null as string | null,
+    selectedItemId: null as number | null
   }),
 
   methods: {
@@ -104,56 +155,69 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       const weekAgo = new Date();
       weekAgo.setDate(new Date().getDate() - 7);
       const weekAgoTime = weekAgo.getTime();
-      this.setChartDatas(
-        this.timeseries.map(set => set.filter(({ timestamp }) => new Date(timestamp).getTime() > weekAgoTime))
-      );
+      this.chartDatas = this.getChartDatas(weekAgoTime);
+    },
+
+    useTwoWeekTimeRange(): void {
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(new Date().getDate() - 14);
+      const twoWeeksAgoTime = twoWeeksAgo.getTime();
+      this.chartDatas = this.getChartDatas(twoWeeksAgoTime);
     },
 
     useMonthTimeRange(): void {
-      this.setChartDatas(this.timeseries);
+      this.chartDatas = this.getChartDatas();
     },
 
-    setChartDatas(timeSeriesArr: AuctionTimeSeriesEntry[][]): void {
-      const chartDatas: { data: ChartData; name: string }[] = [];
+    getChartDatas(fromTime: number = 0): { data: ChartData; name: string; id: number }[] {
+      const chartDatas: { data: ChartData; name: string; id: number }[] = [];
 
-      for (const timeSeries of timeSeriesArr) {
-        const mapped = timeSeries.reduce<{
-          name: string;
-          min: { t: string; y: number }[];
-          max: { t: string; y: number }[];
-          average: { t: string; y: number }[];
-          price25: { t: string; y: number }[];
-          price50: { t: string; y: number }[];
-          price75: { t: string; y: number }[];
-          price95: { t: string; y: number }[];
-          price99: { t: string; y: number }[];
-        }>(
-          (prev, curr) => ({
-            name: this.wowItems.get(curr.wowItemId)?.name ?? 'N/A',
-            min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
-            max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
-            average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
-            price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
-            price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
-            price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
-            price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
-            price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }]
-          }),
-          {
-            name: '',
-            min: [],
-            max: [],
-            average: [],
-            price25: [],
-            price50: [],
-            price75: [],
-            price95: [],
-            price99: []
-          }
-        );
+      for (const [key, timeSeries] of this.itemTimeseries.entries()) {
+        const item = this.wowItems.get(key);
+
+        const mapped = timeSeries
+          .filter(({ timestamp }) => new Date(timestamp).getTime() > fromTime)
+          .reduce<{
+            name: string;
+            id: number;
+            min: { t: string; y: number }[];
+            max: { t: string; y: number }[];
+            average: { t: string; y: number }[];
+            price25: { t: string; y: number }[];
+            price50: { t: string; y: number }[];
+            price75: { t: string; y: number }[];
+            price95: { t: string; y: number }[];
+            price99: { t: string; y: number }[];
+          }>(
+            (prev, curr) => ({
+              name: prev.name,
+              id: prev.id,
+              min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
+              max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
+              average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
+              price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
+              price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
+              price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
+              price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
+              price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }]
+            }),
+            {
+              name: item?.name ?? 'N/A',
+              id: item?.id ?? NaN,
+              min: [],
+              max: [],
+              average: [],
+              price25: [],
+              price50: [],
+              price75: [],
+              price95: [],
+              price99: []
+            }
+          );
 
         chartDatas.push({
           name: mapped.name,
+          id: mapped.id,
           data: {
             datasets: [
               {
@@ -209,7 +273,122 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         });
       }
 
-      this.chartDatas = chartDatas;
+      return chartDatas;
+    },
+
+    async removeItemFromWatchList(itemId: number): Promise<void> {
+      if (!this.watchList) {
+        return;
+      }
+
+      try {
+        const watchList = await watchListService.deleteItemFromWatchListForUser(this.userId, this.watchList.id, itemId);
+
+        ArrayUtilities.removeWhere(this.chartDatas ?? [], item => item.id === itemId);
+        this.itemTimeseries.delete(itemId);
+        this.watchList = watchList;
+      } catch (error) {
+        loggerService.error(error);
+      }
+    },
+
+    async addSelectedItemToWatchList(): Promise<void> {
+      if (this.selectedItemId === null || !this.watchList) {
+        loggerService.error('No selected item!');
+        return;
+      }
+
+      try {
+        const watchList = await watchListService.addItemToWatchListForUser(this.userId, this.watchList.id, {
+          id: this.selectedItemId
+        });
+
+        await this.setWatchList(watchList);
+      } catch (error) {
+        loggerService.error(error);
+      } finally {
+        this.selectedItemId = null;
+      }
+    },
+
+    async setWatchList(watchList: WatchList): Promise<void> {
+      this.itemTimeseries.clear();
+      const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
+
+      if (!connectedRealm) {
+        loggerService.warn(
+          `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
+        );
+      }
+
+      this.watchList = watchList;
+      this.watchListRealms = connectedRealm?.realms.map(r => r.name).sort() ?? [];
+      ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
+
+      const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
+
+      const monthAgo = new Date();
+      monthAgo.setDate(new Date().getDate() - 30);
+
+      for (const item of watchList.watchedItems) {
+        this.wowItems.set(item.id, item);
+        timeSeriesPromises.set(
+          item.id,
+          auctionTimeSeriesService.getAuctionTimeSeries(
+            {
+              wowItemId: item.id,
+              connectedRealmId: watchList.connectedRealmId,
+              startDate: monthAgo.toISOString().split('T')[0]
+            },
+            {
+              orderBy: 'timestamp',
+              comparer: Comparer.dateAscending
+            }
+          )
+        );
+      }
+
+      for (const [key, value] of timeSeriesPromises.entries()) {
+        try {
+          const timeseries = await value;
+          this.itemTimeseries.set(key, timeseries);
+        } catch (error) {
+          loggerService.error(`Unable to get timeseries for ${key}`, error);
+        }
+      }
+
+      this.useWeekTimeRange();
+    },
+
+    async searchItems(searchTerm: string): Promise<void> {
+      this.itemsLoading = true;
+
+      try {
+        this.items = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.itemsLoading = false;
+      }
+    },
+
+    // Must use 'function' syntax for correct 'this' binding
+    throttledSearchItems: debounce(function (
+      this: Vue & { searchItems(searchTerm: string): Promise<void> },
+      newValue: string
+    ): void {
+      this.searchItems(newValue);
+    },
+    250)
+  },
+
+  watch: {
+    itemsSearchTerm(newValue: string | null): void {
+      if (!newValue) {
+        return;
+      }
+
+      this.throttledSearchItems(newValue);
     }
   },
 
@@ -222,41 +401,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return;
     }
 
-    const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
-
-    if (!connectedRealm) {
-      loggerService.warn(
-        `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
-      );
-    }
-
-    this.watchList = { ...watchList, realms: connectedRealm?.realms.map(r => r.name) ?? [] };
-
-    const timeSeriesPromises: Promise<AuctionTimeSeriesEntry[]>[] = [];
-
-    const monthAgo = new Date();
-    monthAgo.setDate(new Date().getDate() - 30);
-
-    for (const item of watchList.watchedItems) {
-      this.wowItems.set(item.id, item);
-      timeSeriesPromises.push(
-        auctionTimeSeriesService.getAuctionTimeSeries(
-          {
-            wowItemId: item.id,
-            connectedRealmId: watchList.connectedRealmId,
-            startDate: monthAgo.toISOString().split('T')[0]
-          },
-          {
-            orderBy: 'timestamp',
-            comparer: Comparer.dateAscending
-          }
-        )
-      );
-    }
-
-    this.timeseries = await Promise.all(timeSeriesPromises);
-
-    this.useWeekTimeRange();
+    await this.setWatchList(watchList);
   }
 });
 </script>

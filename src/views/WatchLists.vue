@@ -194,13 +194,16 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         const newWatchList = await watchListService.createWatchListForUser(this.userId, watchListToCreate);
         this.watchLists.push({
           ...newWatchList,
-          realms: this.connectedRealms.get(newWatchList.connectedRealmId)?.realms.map(r => r.name) ?? []
+          realms:
+            this.connectedRealms
+              .get(newWatchList.connectedRealmId)
+              ?.realms.map(r => r.name)
+              .sort() ?? []
         });
       } catch (error) {
         console.error(error);
       } finally {
         this.createNew.selectedRealmId = null;
-        //this.createNew.realmsSearch = null;
         this.createNew.loading = false;
         this.createNew.showDialog = false;
         this.resetCreateWatchListForm();
@@ -210,38 +213,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     resetCreateWatchListForm(): void {
       (this.$refs.createWatchListForm as any).reset();
     }
-
-    //   async searchRealms(searchTerm: string): Promise<void> {
-    //     this.createNew.realmsLoading = true;
-
-    //     try {
-    //       this.createNew.realms = await realmService.getRealms({ nameLike: searchTerm });
-    //     } catch (error) {
-    //       console.error(error);
-    //     } finally {
-    //       this.createNew.realmsLoading = false;
-    //     }
-    //   },
-
-    //   // Must use 'function' syntax for correct 'this' binding
-    //   throttledSearchRealms: throttle(function (
-    //     this: Vue & { searchRealms(searchTerm: string): Promise<void> },
-    //     newValue: string
-    //   ): void {
-    //     this.searchRealms(newValue);
-    //   },
-    //   1000)
-    // },
-
-    // watch: {
-    //   'createNew.realmsSearch'(newValue: string | null): void {
-    //     if (!newValue) {
-    //       return;
-    //     }
-
-    //     this.throttledSearchRealms(newValue);
-    //   }
-    // },
   },
 
   async mounted(): Promise<void> {
@@ -269,7 +240,11 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     });
     this.watchLists = watchLists.map(wl => ({
       ...wl,
-      realms: this.connectedRealms.get(wl.connectedRealmId)?.realms.map(r => r.name) ?? []
+      realms:
+        this.connectedRealms
+          .get(wl.connectedRealmId)
+          ?.realms.map(r => r.name)
+          .sort() ?? []
     }));
   }
 });

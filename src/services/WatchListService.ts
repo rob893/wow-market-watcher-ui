@@ -142,7 +142,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
     }
   }
 
-  public async deleteItemFromWatchListForUser(userId: number, watchListId: number, itemId: number): Promise<void> {
+  public async deleteItemFromWatchListForUser(userId: number, watchListId: number, itemId: number): Promise<WatchList> {
     const { data } = await this.delete<WatchList>(`users/${userId}/watchLists/${watchListId}/items/${itemId}`);
 
     this.cache.set(this.getWatchListCacheKey(watchListId), data);
@@ -157,6 +157,8 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
         this.cache.delete(cacheKey);
       }
     }
+
+    return data;
   }
 
   private getWatchListCacheKey(watchListId: number): string {
