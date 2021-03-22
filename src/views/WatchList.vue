@@ -326,7 +326,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           date.setDate(new Date().getDate() - 14);
           return date.getTime();
         case 'month':
-          date.setDate(new Date().getMonth() - 1);
+          date.setMonth(new Date().getMonth() - 1);
           return date.getTime();
         default:
           return NaN;
@@ -451,7 +451,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
 
     const monthAgo = new Date();
-    monthAgo.setDate(new Date().getMonth() - 1);
+    monthAgo.setMonth(new Date().getMonth() - 1);
 
     for (const item of watchList.watchedItems) {
       this.wowItems.set(item.id, item);
