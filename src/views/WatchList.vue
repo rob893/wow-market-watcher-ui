@@ -81,7 +81,7 @@ import { auctionTimeSeriesService, watchListService, loggerService, realmService
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
-import { ChartData, ChartOptions } from 'node_modules/@types/chart.js';
+import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
 import { Comparer, ChartPluginFactory, ArrayUtilities } from '@/utilities';
 import { AuctionTimeSeriesEntry, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
@@ -112,11 +112,42 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     chartOptions: {
       responsive: true,
       maintainAspectRatio: false,
+      legend: {
+        labels: {
+          filter: (item, data) => {
+            if ((data.datasets ?? [])[item.datasetIndex ?? 0].label === 'Total Available') {
+              return false;
+            }
+
+            return true;
+          }
+        }
+      },
       tooltips: {
         intersect: false,
         mode: 'index',
         callbacks: {
-          title: items => (items.length > 0 ? new Date(items[0].label ?? '').toLocaleString('en-US') : 'No Label')
+          title: items => (items.length > 0 ? new Date(items[0].label ?? '').toLocaleString('en-US') : 'No Label'),
+          label: (tooltipItem, data) => {
+            const datasets = data.datasets ?? [];
+
+            const curr = datasets[tooltipItem.datasetIndex ?? 0];
+            const currMessage = `${curr.label}: ${((curr.data ?? [])[
+              tooltipItem.index ?? 0
+            ] as ChartPoint).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+
+            if (tooltipItem.datasetIndex === 0) {
+              const totalAvailable = datasets.find(d => d.label === 'Total Available');
+              return [
+                `${totalAvailable?.label}: ${((totalAvailable?.data ?? [])[
+                  tooltipItem.index ?? 0
+                ] as ChartPoint).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
+                currMessage
+              ];
+            }
+
+            return currMessage;
+          }
         }
       },
       scales: {
@@ -152,27 +183,24 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
   methods: {
     useWeekTimeRange(): void {
-      const weekAgo = new Date();
-      weekAgo.setDate(new Date().getDate() - 7);
-      const weekAgoTime = weekAgo.getTime();
-      this.chartDatas = this.getChartDatas(weekAgoTime);
+      this.chartDatas = this.getChartDatas(this.getTimeAgo('week'));
     },
 
     useTwoWeekTimeRange(): void {
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(new Date().getDate() - 14);
-      const twoWeeksAgoTime = twoWeeksAgo.getTime();
-      this.chartDatas = this.getChartDatas(twoWeeksAgoTime);
+      this.chartDatas = this.getChartDatas(this.getTimeAgo('twoWeeks'));
     },
 
     useMonthTimeRange(): void {
-      this.chartDatas = this.getChartDatas();
+      this.chartDatas = this.getChartDatas(this.getTimeAgo('month'));
     },
 
-    getChartDatas(fromTime: number = 0): { data: ChartData; name: string; id: number }[] {
+    getChartDatas(
+      fromTime: number,
+      timeSeriesEntries?: [number, AuctionTimeSeriesEntry[]][]
+    ): { data: ChartData; name: string; id: number }[] {
       const chartDatas: { data: ChartData; name: string; id: number }[] = [];
 
-      for (const [key, timeSeries] of this.itemTimeseries.entries()) {
+      for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
         const item = this.wowItems.get(key);
 
         const mapped = timeSeries
@@ -188,6 +216,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             price75: { t: string; y: number }[];
             price95: { t: string; y: number }[];
             price99: { t: string; y: number }[];
+            totalAvailable: { t: string; y: number }[];
           }>(
             (prev, curr) => ({
               name: prev.name,
@@ -199,7 +228,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
               price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
               price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
-              price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }]
+              price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }],
+              totalAvailable: [...prev.totalAvailable, { t: curr.timestamp, y: curr.totalAvailableForAuction }]
             }),
             {
               name: item?.name ?? 'N/A',
@@ -211,7 +241,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               price50: [],
               price75: [],
               price95: [],
-              price99: []
+              price99: [],
+              totalAvailable: []
             }
           );
 
@@ -221,12 +252,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           data: {
             datasets: [
               {
-                label: 'Average',
-                data: mapped.average,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
                 label: 'Min',
                 data: mapped.min,
                 pointRadius: 0,
@@ -235,6 +260,12 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               {
                 label: 'Max',
                 data: mapped.max,
+                pointRadius: 0,
+                hidden: true
+              },
+              {
+                label: 'Average',
+                data: mapped.average,
                 pointRadius: 0,
                 hidden: true
               },
@@ -267,13 +298,39 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
                 data: mapped.price99,
                 pointRadius: 0,
                 hidden: true
+              },
+              {
+                label: 'Total Available',
+                data: mapped.totalAvailable,
+                showLine: false,
+                pointRadius: 0,
+                hidden: true
               }
             ]
           }
         });
       }
 
+      ArrayUtilities.orderBy(chartDatas, { orderBy: 'name' });
+
       return chartDatas;
+    },
+
+    getTimeAgo(timeFrame: ChartTimeFrame): number {
+      const date = new Date();
+      switch (timeFrame) {
+        case 'week':
+          date.setDate(new Date().getDate() - 7);
+          return date.getTime();
+        case 'twoWeeks':
+          date.setDate(new Date().getDate() - 14);
+          return date.getTime();
+        case 'month':
+          date.setDate(new Date().getMonth() - 1);
+          return date.getTime();
+        default:
+          return NaN;
+      }
     },
 
     async removeItemFromWatchList(itemId: number): Promise<void> {
@@ -303,61 +360,39 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           id: this.selectedItemId
         });
 
-        await this.setWatchList(watchList);
+        this.watchList = watchList;
+
+        const item = watchList.watchedItems.find(i => i.id === this.selectedItemId);
+
+        if (!item) {
+          loggerService.error(`No item with id ${this.selectedItemId} on watch list.`);
+          return;
+        }
+
+        const monthAgo = new Date();
+        monthAgo.setDate(new Date().getDate() - 30);
+
+        this.wowItems.set(item.id, item);
+        const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
+          {
+            wowItemId: item.id,
+            connectedRealmId: watchList.connectedRealmId,
+            startDate: monthAgo.toISOString().split('T')[0]
+          },
+          {
+            orderBy: 'timestamp',
+            comparer: Comparer.dateAscending
+          }
+        );
+
+        this.itemTimeseries.set(item.id, timeseries);
+        this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
+        ArrayUtilities.orderBy(this.chartDatas ?? [], { orderBy: 'name' });
       } catch (error) {
         loggerService.error(error);
       } finally {
         this.selectedItemId = null;
       }
-    },
-
-    async setWatchList(watchList: WatchList): Promise<void> {
-      this.itemTimeseries.clear();
-      const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
-
-      if (!connectedRealm) {
-        loggerService.warn(
-          `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
-        );
-      }
-
-      this.watchList = watchList;
-      this.watchListRealms = connectedRealm?.realms.map(r => r.name).sort() ?? [];
-      ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
-
-      const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
-
-      const monthAgo = new Date();
-      monthAgo.setDate(new Date().getDate() - 30);
-
-      for (const item of watchList.watchedItems) {
-        this.wowItems.set(item.id, item);
-        timeSeriesPromises.set(
-          item.id,
-          auctionTimeSeriesService.getAuctionTimeSeries(
-            {
-              wowItemId: item.id,
-              connectedRealmId: watchList.connectedRealmId,
-              startDate: monthAgo.toISOString().split('T')[0]
-            },
-            {
-              orderBy: 'timestamp',
-              comparer: Comparer.dateAscending
-            }
-          )
-        );
-      }
-
-      for (const [key, value] of timeSeriesPromises.entries()) {
-        try {
-          const timeseries = await value;
-          this.itemTimeseries.set(key, timeseries);
-        } catch (error) {
-          loggerService.error(`Unable to get timeseries for ${key}`, error);
-        }
-      }
-
-      this.useWeekTimeRange();
     },
 
     async searchItems(searchTerm: string): Promise<void> {
@@ -401,7 +436,51 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return;
     }
 
-    await this.setWatchList(watchList);
+    const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
+
+    if (!connectedRealm) {
+      loggerService.warn(
+        `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
+      );
+    }
+
+    this.watchList = watchList;
+    this.watchListRealms = connectedRealm?.realms.map(r => r.name).sort() ?? [];
+    ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
+
+    const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
+
+    const monthAgo = new Date();
+    monthAgo.setDate(new Date().getMonth() - 1);
+
+    for (const item of watchList.watchedItems) {
+      this.wowItems.set(item.id, item);
+      timeSeriesPromises.set(
+        item.id,
+        auctionTimeSeriesService.getAuctionTimeSeries(
+          {
+            wowItemId: item.id,
+            connectedRealmId: watchList.connectedRealmId,
+            startDate: monthAgo.toISOString().split('T')[0]
+          },
+          {
+            orderBy: 'timestamp',
+            comparer: Comparer.dateAscending
+          }
+        )
+      );
+    }
+
+    for (const [key, value] of timeSeriesPromises.entries()) {
+      try {
+        const timeseries = await value;
+        this.itemTimeseries.set(key, timeseries);
+      } catch (error) {
+        loggerService.error(`Unable to get timeseries for ${key}`, error);
+      }
+    }
+
+    this.useWeekTimeRange();
   }
 });
 </script>

@@ -61,9 +61,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line> & Instance
     this.chartPlugins.forEach(plugin => this.addPlugin(plugin));
 
     const lineColors = this.chartColors ?? [
-      colors.red.base,
       colors.purple.base,
       colors.blue.base,
+      colors.red.base,
       colors.amber.base,
       colors.indigo.base,
       colors.green.base,
