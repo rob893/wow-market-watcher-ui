@@ -27,7 +27,7 @@ export interface CreateWatchListRequest {
 
 export type CreateWatchListForUserRequest = Omit<CreateWatchListRequest, 'userId'>;
 
-export interface UpdateWatchListRequest {
+export interface UpdateWatchListRequest extends Indexable {
   name?: string;
   description?: string;
 }

@@ -43,7 +43,7 @@
 
               <v-col>
                 <v-btn color="success" @click="addSelectedItemToWatchList" :disabled="selectedItemId === null"
-                  >Add Item</v-btn
+                  ><v-icon left> mdi-plus </v-icon>Add Item</v-btn
                 >
               </v-col>
             </v-row>
@@ -54,7 +54,7 @@
         <v-card elevation="2">
           <v-card-title
             >{{ name }}<v-spacer /><v-btn color="error" @click="removeItemFromWatchList(id)"
-              >Remove</v-btn
+              ><v-icon left> mdi-delete </v-icon>Remove</v-btn
             ></v-card-title
           >
           <v-card-text>
@@ -414,7 +414,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     ): void {
       this.searchItems(newValue);
     },
-    250)
+    500)
   },
 
   watch: {
