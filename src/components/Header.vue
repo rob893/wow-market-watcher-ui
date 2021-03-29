@@ -68,12 +68,24 @@
     </v-navigation-drawer>
 
     <v-app-bar app clipped-left>
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="hidden-md-and-up"></v-app-bar-nav-icon>
       <router-link class="toolbar-title" to="/">
         <v-toolbar-title>
           {{ title }}
         </v-toolbar-title>
       </router-link>
+
+      <v-spacer />
+
+      <div class="hidden-sm-and-down">
+        <v-btn v-if="!isUserLoggedIn" link to="/login" text>Login</v-btn>
+        <v-btn v-if="!isUserLoggedIn" link to="/register" text>Sign Up</v-btn>
+        <v-btn v-if="isUserLoggedIn" link to="/watch-lists" text>Watch Lists</v-btn>
+        <v-btn link to="/about" text>About</v-btn>
+        <v-btn v-if="isUserLoggedIn" link to="/test" text>Test</v-btn>
+        <v-btn v-if="isUserLoggedIn" @click="showSettings = true" text>Settings</v-btn>
+        <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>
+      </div>
     </v-app-bar>
 
     <v-dialog width="500" v-model="showSettings">
