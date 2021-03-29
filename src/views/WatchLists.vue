@@ -107,6 +107,8 @@
                 (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
               )}`
             }}
+            <br />
+            Population: {{ list.population }}
           </v-card-text>
           <v-card-actions>
             <v-btn @click="goToWatchList(list.id)"><v-icon left> mdi-details </v-icon>Details</v-btn>
@@ -195,7 +197,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
   data: () => ({
     user: {} as User,
-    watchLists: [] as (WatchList & { realms: string[] })[],
+    watchLists: [] as (WatchList & { realms: string[]; population: string })[],
     showDeleteDialog: false,
     stagedWatchListToDelete: null as WatchList | null,
     realms: [] as Realm[],
@@ -212,7 +214,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       watchListToCreate: {} as CreateWatchListForUserRequest
     },
     editWatchList: {
-      stagedWatchList: null as null | (WatchList & { realms: string[] }),
+      stagedWatchList: null as null | (WatchList & { realms: string[]; population: string }),
       watchListToEdit: {
         name: { edited: false, value: '' },
         description: { edited: false, value: '' }
@@ -270,6 +272,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         const newWatchList = await watchListService.createWatchListForUser(this.userId, watchListToCreate);
         this.watchLists.push({
           ...newWatchList,
+          population: this.connectedRealms.get(newWatchList.connectedRealmId)?.population ?? '',
           realms:
             this.connectedRealms
               .get(newWatchList.connectedRealmId)
@@ -286,7 +289,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
-    stageEditWatchList(watchList: WatchList & { realms: string[] }): void {
+    stageEditWatchList(watchList: WatchList & { realms: string[]; population: string }): void {
       this.editWatchList.watchListIndex = this.watchLists.indexOf(watchList);
 
       Object.keys(this.editWatchList.watchListToEdit).forEach(key => {
@@ -385,8 +388,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
       return 0;
     });
+
     this.watchLists = watchLists.map(wl => ({
       ...wl,
+      population: this.connectedRealms.get(wl.connectedRealmId)?.population ?? '',
       realms:
         this.connectedRealms
           .get(wl.connectedRealmId)

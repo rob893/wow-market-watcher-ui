@@ -8,10 +8,13 @@
             {{ watchList.description }}
             <br />
             {{
-              `Realm${watchListRealms.length > 1 ? 's' : ''}: ${watchListRealms.reduce(
-                (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
-              )}`
+              `Realm${watchListConnectedRealm.realms.length > 1 ? 's' : ''}: ${watchListConnectedRealm.realms
+                .map(r => r.name)
+                .sort()
+                .reduce((prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`)}`
             }}
+            <br />
+            Population: {{ watchListConnectedRealm.population }}
           </v-card-text>
           <v-card-actions>
             <v-row>
@@ -83,7 +86,7 @@ import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
 import { Comparer, ChartPluginFactory, ArrayUtilities } from '@/utilities';
-import { AuctionTimeSeriesEntry, WatchList, WoWItem } from '@/models';
+import { AuctionTimeSeriesEntry, ConnectedRealm, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 
@@ -107,7 +110,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
   data: () => ({
     watchList: undefined as WatchList | undefined,
-    watchListRealms: [] as string[],
+    watchListConnectedRealm: {} as ConnectedRealm,
     chartDatas: undefined as { data: ChartData; name: string; id: number }[] | undefined,
     chartOptions: {
       responsive: true,
@@ -442,10 +445,11 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       loggerService.warn(
         `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
       );
+    } else {
+      this.watchListConnectedRealm = connectedRealm;
     }
 
     this.watchList = watchList;
-    this.watchListRealms = connectedRealm?.realms.map(r => r.name).sort() ?? [];
     ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
 
     const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();

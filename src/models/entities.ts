@@ -64,5 +64,6 @@ export interface Realm {
 
 export interface ConnectedRealm {
   id: number;
+  population: string;
   realms: Realm[];
 }

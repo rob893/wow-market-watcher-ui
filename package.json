@@ -20,7 +20,7 @@
     "lodash": "^4.17.21",
     "query-string": "^7.0.0",
     "register-service-worker": "^1.7.2",
-    "rxjs": "^6.6.6",
+    "rxjs": "^6.6.7",
     "typescript-lru-cache": "^1.2.0",
     "uuid": "^8.3.2",
     "vue": "^2.6.11",
