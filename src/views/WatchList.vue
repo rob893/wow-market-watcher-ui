@@ -1,6 +1,6 @@
 <template>
-  <v-container v-if="chartDatas" fluid>
-    <v-row>
+  <v-container fluid>
+    <v-row v-if="!pageLoading && chartDatas">
       <v-col cols="12">
         <v-card v-if="watchList" elevation="2">
           <v-card-title>{{ watchList.name }}</v-card-title>
@@ -76,6 +76,11 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <div v-else>
+      <v-progress-linear indeterminate color="accent"></v-progress-linear>
+      <v-skeleton-loader v-for="n in 3" :key="n" type="card" v-bind:class="n != 3 ? 'mb-6' : ''" group />
+    </div>
   </v-container>
 </template>
 
@@ -109,6 +114,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   data: () => ({
+    pageLoading: false,
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
     chartDatas: undefined as { data: ChartData; name: string; id: number }[] | undefined,
@@ -411,7 +417,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     // Must use 'function' syntax for correct 'this' binding
-    throttledSearchItems: debounce(function (
+    debouncedSearchItems: debounce(function (
       this: Vue & { searchItems(searchTerm: string): Promise<void> },
       newValue: string
     ): void {
@@ -426,65 +432,73 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         return;
       }
 
-      this.throttledSearchItems(newValue);
+      this.debouncedSearchItems(newValue);
     }
   },
 
   async mounted(): Promise<void> {
-    const watchList = await watchListService.getWatchListForUser(this.userId, Number(this.id));
+    this.pageLoading = true;
 
-    if (!watchList) {
-      loggerService.warn(`No watch list found with id ${this.id} for user ${this.userId}`);
-      this.$router.push({ name: RouteName.NotFound });
-      return;
-    }
+    try {
+      const watchList = await watchListService.getWatchListForUser(this.userId, Number(this.id));
 
-    const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
-
-    if (!connectedRealm) {
-      loggerService.warn(
-        `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
-      );
-    } else {
-      this.watchListConnectedRealm = connectedRealm;
-    }
-
-    this.watchList = watchList;
-    ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
-
-    const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
-
-    const monthAgo = new Date();
-    monthAgo.setMonth(new Date().getMonth() - 1);
-
-    for (const item of watchList.watchedItems) {
-      this.wowItems.set(item.id, item);
-      timeSeriesPromises.set(
-        item.id,
-        auctionTimeSeriesService.getAuctionTimeSeries(
-          {
-            wowItemId: item.id,
-            connectedRealmId: watchList.connectedRealmId,
-            startDate: monthAgo.toISOString().split('T')[0]
-          },
-          {
-            orderBy: 'timestamp',
-            comparer: Comparer.dateAscending
-          }
-        )
-      );
-    }
-
-    for (const [key, value] of timeSeriesPromises.entries()) {
-      try {
-        const timeseries = await value;
-        this.itemTimeseries.set(key, timeseries);
-      } catch (error) {
-        loggerService.error(`Unable to get timeseries for ${key}`, error);
+      if (!watchList) {
+        loggerService.warn(`No watch list found with id ${this.id} for user ${this.userId}`);
+        this.$router.push({ name: RouteName.NotFound });
+        return;
       }
-    }
 
-    this.useWeekTimeRange();
+      const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
+
+      if (!connectedRealm) {
+        loggerService.warn(
+          `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
+        );
+      } else {
+        this.watchListConnectedRealm = connectedRealm;
+      }
+
+      this.watchList = watchList;
+      ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
+
+      const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
+
+      const monthAgo = new Date();
+      monthAgo.setMonth(new Date().getMonth() - 1);
+
+      for (const item of watchList.watchedItems) {
+        this.wowItems.set(item.id, item);
+        timeSeriesPromises.set(
+          item.id,
+          auctionTimeSeriesService.getAuctionTimeSeries(
+            {
+              wowItemId: item.id,
+              connectedRealmId: watchList.connectedRealmId,
+              startDate: monthAgo.toISOString().split('T')[0]
+            },
+            {
+              orderBy: 'timestamp',
+              comparer: Comparer.dateAscending
+            }
+          )
+        );
+      }
+
+      for (const [key, value] of timeSeriesPromises.entries()) {
+        try {
+          const timeseries = await value;
+          this.itemTimeseries.set(key, timeseries);
+        } catch (error) {
+          loggerService.error(`Unable to get timeseries for ${key}`, error);
+        }
+      }
+
+      this.useWeekTimeRange();
+    } catch (error) {
+      loggerService.error(error);
+    } finally {
+      this.pageLoading = false;
+    }
   }
 });
 </script>
