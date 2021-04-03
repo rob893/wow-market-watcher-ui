@@ -9,3 +9,4 @@ export * from './EnvironmentService';
 export * from './WatchListService';
 export * from './RealmService';
 export * from './WoWItemService';
+export * from './LoadingService';

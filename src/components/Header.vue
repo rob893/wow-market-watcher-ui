@@ -86,6 +86,14 @@
         <v-btn v-if="isUserLoggedIn" @click="showSettings = true" text>Settings</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>
       </div>
+
+      <v-progress-linear
+        :active="loading"
+        indeterminate
+        absolute
+        bottom
+        color="deep-purple accent-4"
+      ></v-progress-linear>
     </v-app-bar>
 
     <v-dialog width="500" v-model="showSettings">
@@ -113,16 +121,19 @@ import { Subscription } from 'rxjs';
 import { authService } from '@/services/AuthService';
 import { uiSettingsService } from '@/services/UISettingsService';
 import { environmentService } from '@/services/EnvironmentService';
+import { loadingService } from '@/services/LoadingService';
 
 export default Vue.extend({
   name: 'Header',
 
   data: () => ({
+    loading: false,
     showSettings: false,
     drawer: false,
     title: environmentService.appTitle,
     isUserLoggedIn: false,
-    authChangedSubscription: new Subscription()
+    authChangedSubscription: new Subscription(),
+    loadingStateChangedSubscription: new Subscription()
   }),
 
   methods: {
@@ -147,10 +158,14 @@ export default Vue.extend({
   mounted(): void {
     this.isUserLoggedIn = authService.isUserLoggedIn;
     this.authChangedSubscription = authService.authChanged.subscribe(authStatus => (this.isUserLoggedIn = authStatus));
+    this.loadingStateChangedSubscription = loadingService.loadingStateChanged.subscribe(
+      loading => (this.loading = loading)
+    );
   },
 
   beforeDestroy(): void {
     this.authChangedSubscription.unsubscribe();
+    this.loadingStateChangedSubscription.unsubscribe();
   }
 });
 </script>

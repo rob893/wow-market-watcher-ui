@@ -12,7 +12,52 @@
       </v-card>
     </v-dialog>
 
-    <v-row>
+    <v-dialog v-model="editWatchList.showDialog" persistent max-width="600px">
+      <v-card>
+        <v-form ref="editWatchListForm" v-model="editWatchList.formValid" @submit.prevent="saveEditWatchList">
+          <v-card-title>
+            <span class="headline">Edit Watch List</span>
+          </v-card-title>
+
+          <v-card-text>
+            <v-container>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    label="Name"
+                    :rules="watchListCommon.nameRules"
+                    v-model="editWatchList.watchListToEdit.name.value"
+                    @input="editWatchList.watchListToEdit.name.edited = true"
+                  />
+                </v-col>
+
+                <v-col cols="12">
+                  <v-textarea
+                    label="Description"
+                    v-model="editWatchList.watchListToEdit.description.value"
+                    @input="editWatchList.watchListToEdit.description.edited = true"
+                  />
+                </v-col>
+              </v-row>
+            </v-container>
+          </v-card-text>
+
+          <v-card-actions v-if="editWatchList.loading" class="justify-center">
+            <v-progress-circular indeterminate color="primary" />
+          </v-card-actions>
+
+          <v-card-actions v-else>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" text @click="closeEditWatchListDialog">Close</v-btn>
+            <v-btn color="blue darken-1" text type="submit" :disabled="Object.keys(editedWatchListValues).length === 0"
+              >Save</v-btn
+            >
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
+    <v-row v-if="!pageLoading">
       <v-col cols="12">
         <v-card>
           <v-card-title>My Watch Lists</v-card-title>
@@ -126,50 +171,9 @@
       </v-col>
     </v-row>
 
-    <v-dialog v-model="editWatchList.showDialog" persistent max-width="600px">
-      <v-card>
-        <v-form ref="editWatchListForm" v-model="editWatchList.formValid" @submit.prevent="saveEditWatchList">
-          <v-card-title>
-            <span class="headline">Edit Watch List</span>
-          </v-card-title>
-
-          <v-card-text>
-            <v-container>
-              <v-row>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    label="Name"
-                    :rules="watchListCommon.nameRules"
-                    v-model="editWatchList.watchListToEdit.name.value"
-                    @input="editWatchList.watchListToEdit.name.edited = true"
-                  />
-                </v-col>
-
-                <v-col cols="12">
-                  <v-textarea
-                    label="Description"
-                    v-model="editWatchList.watchListToEdit.description.value"
-                    @input="editWatchList.watchListToEdit.description.edited = true"
-                  />
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-card-text>
-
-          <v-card-actions v-if="editWatchList.loading" class="justify-center">
-            <v-progress-circular indeterminate color="primary" />
-          </v-card-actions>
-
-          <v-card-actions v-else>
-            <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" text @click="closeEditWatchListDialog">Close</v-btn>
-            <v-btn color="blue darken-1" text type="submit" :disabled="Object.keys(editedWatchListValues).length === 0"
-              >Save</v-btn
-            >
-          </v-card-actions>
-        </v-form>
-      </v-card>
-    </v-dialog>
+    <div v-else>
+      <v-skeleton-loader v-for="n in 3" :key="n" type="card" v-bind:class="n != 3 ? 'mb-6' : ''" elevation="2" />
+    </div>
   </v-container>
 </template>
 
@@ -183,12 +187,12 @@ import {
   Indexable,
   Realm,
   UpdateWatchListRequest,
-  User,
   WatchList
 } from '@/models';
 import { RouteName } from '@/router/RouteName';
-import { loggerService, realmService, watchListService } from '@/services';
+import { loadingService, loggerService, realmService, watchListService } from '@/services';
 import { Utilities } from '@/utilities';
+import { Subscription } from 'rxjs';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'WatchLists',
@@ -196,7 +200,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   mixins: [UserMixin],
 
   data: () => ({
-    user: {} as User,
+    pageLoading: false,
+    loadingSubscription: new Subscription(),
     watchLists: [] as (WatchList & { realms: string[]; population: string })[],
     showDeleteDialog: false,
     stagedWatchListToDelete: null as WatchList | null,
@@ -366,6 +371,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   async mounted(): Promise<void> {
+    this.loadingSubscription = loadingService.loadingStateChanged.subscribe(loading => (this.pageLoading = loading));
+    loadingService.startLoading();
+
     const realmsPromise = realmService.getConnectedRealms();
     const watchLists = await watchListService.getWatchListsForUser(this.userId);
     const connectedRealms = await realmsPromise;
@@ -398,6 +406,12 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           ?.realms.map(r => r.name)
           .sort() ?? []
     }));
+
+    loadingService.stopLoading();
+  },
+
+  beforeDestroy(): void {
+    this.loadingSubscription.unsubscribe();
   }
 });
 </script>

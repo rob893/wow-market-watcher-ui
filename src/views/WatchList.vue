@@ -78,14 +78,20 @@
     </v-row>
 
     <div v-else>
-      <v-progress-linear indeterminate color="accent"></v-progress-linear>
-      <v-skeleton-loader v-for="n in 3" :key="n" type="card" v-bind:class="n != 3 ? 'mb-6' : ''" group />
+      <v-skeleton-loader v-for="n in 3" :key="n" type="card" v-bind:class="n != 3 ? 'mb-6' : ''" elevation="2" />
     </div>
   </v-container>
 </template>
 
 <script lang="ts">
-import { auctionTimeSeriesService, watchListService, loggerService, realmService, wowItemService } from '@/services';
+import {
+  auctionTimeSeriesService,
+  watchListService,
+  loggerService,
+  realmService,
+  wowItemService,
+  loadingService
+} from '@/services';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
@@ -94,6 +100,7 @@ import { Comparer, ChartPluginFactory, ArrayUtilities } from '@/utilities';
 import { AuctionTimeSeriesEntry, ConnectedRealm, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
+import { Subscription } from 'rxjs';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -115,6 +122,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
   data: () => ({
     pageLoading: false,
+    pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
     chartDatas: undefined as { data: ChartData; name: string; id: number }[] | undefined,
@@ -437,7 +445,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   async mounted(): Promise<void> {
-    this.pageLoading = true;
+    this.pageLoadingSubscription = loadingService.loadingStateChanged.subscribe(
+      loading => (this.pageLoading = loading)
+    );
+    loadingService.startLoading();
 
     try {
       const watchList = await watchListService.getWatchListForUser(this.userId, Number(this.id));
@@ -497,8 +508,12 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     } catch (error) {
       loggerService.error(error);
     } finally {
-      this.pageLoading = false;
+      loadingService.stopLoading();
     }
+  },
+
+  beforeDestroy(): void {
+    this.pageLoadingSubscription.unsubscribe();
   }
 });
 </script>
