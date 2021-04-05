@@ -38,6 +38,7 @@ export interface AuctionTimeSeriesEntry {
 export interface WoWItem {
   id: number;
   name: string;
+  quality: string;
 }
 
 export interface WatchList {

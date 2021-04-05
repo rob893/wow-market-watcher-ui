@@ -1,3 +1,6 @@
+import { WoWItem } from '@/models';
+import { WoWItemQualityColor } from '@/models/blizzard';
+
 export interface ColorRGB {
   r: number;
   g: number;
@@ -5,6 +8,33 @@ export interface ColorRGB {
 }
 
 export class ColorUtilities {
+  public static getItemQualityColor(quality: string): WoWItemQualityColor;
+  public static getItemQualityColor(item: WoWItem): WoWItemQualityColor;
+  public static getItemQualityColor(itemOrQuality: WoWItem | string): WoWItemQualityColor {
+    const quality =
+      typeof itemOrQuality === 'string' ? itemOrQuality.toLowerCase() : itemOrQuality.quality.toLowerCase();
+
+    switch (quality) {
+      case 'poor':
+        return WoWItemQualityColor.Poor;
+      case 'common':
+        return WoWItemQualityColor.Common;
+      case 'uncommon':
+        return WoWItemQualityColor.Uncommon;
+      case 'rare':
+        return WoWItemQualityColor.Rare;
+      case 'epic':
+        return WoWItemQualityColor.Epic;
+      case 'legendary':
+        return WoWItemQualityColor.Legendary;
+      case 'artifact':
+        return WoWItemQualityColor.Artifact;
+      case 'heirloom':
+        return WoWItemQualityColor.Heirloom;
+      default:
+        return WoWItemQualityColor.Common;
+    }
+  }
   public static hexToRgb(hex: string): ColorRGB | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result

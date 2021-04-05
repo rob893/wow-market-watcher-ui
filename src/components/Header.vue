@@ -69,11 +69,17 @@
 
     <v-app-bar app clipped-left>
       <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="hidden-md-and-up"></v-app-bar-nav-icon>
+
       <router-link class="toolbar-title" to="/">
         <v-toolbar-title>
-          {{ title }}
+          <v-icon large color="green">mdi-chart-line</v-icon>
+          <span class="hidden-sm-and-down ml-2">{{ title }}</span>
         </v-toolbar-title>
       </router-link>
+
+      <v-spacer />
+
+      <v-text-field placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
 
       <v-spacer />
 

@@ -41,7 +41,32 @@
                   hide-no-data
                   hide-details
                   label="Items"
-                ></v-autocomplete>
+                  @change="disableWoWHeadLinks"
+                >
+                  <template v-slot:selection="data">
+                    <a
+                      :href="`https://www.wowhead.com/item=${data.item.id}`"
+                      target="_blank"
+                      :style="{ color: getItemQualityColor(data.item.quality), 'text-decoration': 'none' }"
+                      onclick="return false;"
+                    >
+                      {{ data.item.name }}
+                    </a>
+                  </template>
+
+                  <template v-slot:item="data">
+                    <v-list-item-content>
+                      <a
+                        :href="`https://www.wowhead.com/item=${data.item.id}`"
+                        target="_blank"
+                        :style="{ color: getItemQualityColor(data.item.quality), 'text-decoration': 'none' }"
+                        onclick="return false;"
+                      >
+                        {{ data.item.name }}
+                      </a>
+                    </v-list-item-content>
+                  </template>
+                </v-autocomplete>
               </v-col>
 
               <v-col>
@@ -53,13 +78,21 @@
           </v-card-actions>
         </v-card>
       </v-col>
-      <v-col v-for="{ data, name, id } in chartDatas" :key="id" cols="12">
+      <v-col v-for="{ data, name, id, itemQuality } in chartDatas" :key="id" cols="12">
         <v-card elevation="2">
-          <v-card-title
-            >{{ name }}<v-spacer /><v-btn color="error" @click="removeItemFromWatchList(id)"
-              ><v-icon left> mdi-delete </v-icon>Remove</v-btn
-            ></v-card-title
-          >
+          <v-card-title>
+            <a
+              :href="`https://www.wowhead.com/item=${id}`"
+              target="_blank"
+              :style="{ color: getItemQualityColor(itemQuality), 'text-decoration': 'none' }"
+              >{{ name }}</a
+            >
+
+            <v-spacer />
+
+            <v-btn color="error" @click="removeItemFromWatchList(id)"><v-icon left> mdi-delete </v-icon>Remove</v-btn>
+          </v-card-title>
+
           <v-card-text>
             <line-chart
               v-if="
@@ -96,11 +129,12 @@ import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
-import { Comparer, ChartPluginFactory, ArrayUtilities } from '@/utilities';
+import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities } from '@/utilities';
 import { AuctionTimeSeriesEntry, ConnectedRealm, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
+import { WoWItemQualityColor } from '@/models/blizzard';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -125,7 +159,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
-    chartDatas: undefined as { data: ChartData; name: string; id: number }[] | undefined,
+    chartDatas: undefined as { data: ChartData; name: string; id: number; itemQuality: string }[] | undefined,
     chartOptions: {
       responsive: true,
       maintainAspectRatio: false,
@@ -199,6 +233,24 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   }),
 
   methods: {
+    disableWoWHeadLinks(): void {
+      const elements = document.getElementsByClassName('wowhead-tooltip');
+
+      for (const element of elements) {
+        element.setAttribute('style', 'visibility: hidden;');
+
+        const pElements = element.getElementsByTagName('p');
+
+        for (const child of pElements) {
+          child.setAttribute('style', 'visibility: hidden;');
+        }
+      }
+    },
+
+    getItemQualityColor(quality: string): WoWItemQualityColor {
+      return ColorUtilities.getItemQualityColor(quality);
+    },
+
     useWeekTimeRange(): void {
       this.chartDatas = this.getChartDatas(this.getTimeAgo('week'));
     },
@@ -214,8 +266,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     getChartDatas(
       fromTime: number,
       timeSeriesEntries?: [number, AuctionTimeSeriesEntry[]][]
-    ): { data: ChartData; name: string; id: number }[] {
-      const chartDatas: { data: ChartData; name: string; id: number }[] = [];
+    ): { data: ChartData; name: string; id: number; itemQuality: string }[] {
+      const chartDatas: { data: ChartData; name: string; id: number; itemQuality: string }[] = [];
 
       for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
         const item = this.wowItems.get(key);
@@ -225,6 +277,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           .reduce<{
             name: string;
             id: number;
+            itemQuality: string;
             min: { t: string; y: number }[];
             max: { t: string; y: number }[];
             average: { t: string; y: number }[];
@@ -238,6 +291,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             (prev, curr) => ({
               name: prev.name,
               id: prev.id,
+              itemQuality: prev.itemQuality,
               min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
               max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
               average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
@@ -251,6 +305,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             {
               name: item?.name ?? 'N/A',
               id: item?.id ?? NaN,
+              itemQuality: item?.quality ?? 'N/A',
               min: [],
               max: [],
               average: [],
@@ -266,6 +321,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         chartDatas.push({
           name: mapped.name,
           id: mapped.id,
+          itemQuality: mapped.itemQuality,
           data: {
             datasets: [
               {
