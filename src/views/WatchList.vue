@@ -43,27 +43,12 @@
                   label="Items"
                   @change="disableWoWHeadLinks"
                 >
-                  <template v-slot:selection="data">
-                    <a
-                      :href="`https://www.wowhead.com/item=${data.item.id}`"
-                      target="_blank"
-                      :style="{ color: getItemQualityColor(data.item.quality), 'text-decoration': 'none' }"
-                      onclick="return false;"
-                    >
-                      {{ data.item.name }}
-                    </a>
-                  </template>
-
-                  <template v-slot:item="data">
+                  <template v-slot:item="{ parent, item }">
                     <v-list-item-content>
-                      <a
-                        :href="`https://www.wowhead.com/item=${data.item.id}`"
-                        target="_blank"
-                        :style="{ color: getItemQualityColor(data.item.quality), 'text-decoration': 'none' }"
-                        onclick="return false;"
-                      >
-                        {{ data.item.name }}
-                      </a>
+                      <v-list-item-title
+                        :style="{ color: getItemQualityColor(item.quality) }"
+                        v-html="`${parent.genFilteredText(item.name)}`"
+                      ></v-list-item-title>
                     </v-list-item-content>
                   </template>
                 </v-autocomplete>
@@ -81,17 +66,16 @@
       <v-col v-for="{ data, name, id, itemQuality } in chartDatas" :key="id" cols="12">
         <v-card elevation="2">
           <v-card-title>
-            <a
-              :href="`https://www.wowhead.com/item=${id}`"
-              target="_blank"
-              :style="{ color: getItemQualityColor(itemQuality), 'text-decoration': 'none' }"
-              >{{ name }}</a
-            >
+            <span :style="{ color: getItemQualityColor(itemQuality) }">{{ name }}</span>
 
             <v-spacer />
 
             <v-btn color="error" @click="removeItemFromWatchList(id)"><v-icon left> mdi-delete </v-icon>Remove</v-btn>
           </v-card-title>
+
+          <v-card-subtitle>
+            <a :href="`https://www.wowhead.com/item=${id}`" target="_blank">WoWHead Tooltip</a>
+          </v-card-subtitle>
 
           <v-card-text>
             <line-chart
@@ -135,6 +119,7 @@ import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
 import { WoWItemQualityColor } from '@/models/blizzard';
+import { uiSettingsService } from '@/services';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -248,7 +233,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     getItemQualityColor(quality: string): WoWItemQualityColor {
-      return ColorUtilities.getItemQualityColor(quality);
+      return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet);
     },
 
     useWeekTimeRange(): void {

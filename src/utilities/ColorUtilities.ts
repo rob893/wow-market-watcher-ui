@@ -8,9 +8,9 @@ export interface ColorRGB {
 }
 
 export class ColorUtilities {
-  public static getItemQualityColor(quality: string): WoWItemQualityColor;
-  public static getItemQualityColor(item: WoWItem): WoWItemQualityColor;
-  public static getItemQualityColor(itemOrQuality: WoWItem | string): WoWItemQualityColor {
+  public static getItemQualityColor(quality: string, darkTheme: boolean): WoWItemQualityColor;
+  public static getItemQualityColor(item: WoWItem, darkTheme: boolean): WoWItemQualityColor;
+  public static getItemQualityColor(itemOrQuality: WoWItem | string, darkTheme: boolean): WoWItemQualityColor {
     const quality =
       typeof itemOrQuality === 'string' ? itemOrQuality.toLowerCase() : itemOrQuality.quality.toLowerCase();
 
@@ -18,7 +18,7 @@ export class ColorUtilities {
       case 'poor':
         return WoWItemQualityColor.Poor;
       case 'common':
-        return WoWItemQualityColor.Common;
+        return darkTheme ? WoWItemQualityColor.Common : WoWItemQualityColor.CommonLightTheme;
       case 'uncommon':
         return WoWItemQualityColor.Uncommon;
       case 'rare':

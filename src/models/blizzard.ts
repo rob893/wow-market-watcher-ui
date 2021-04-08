@@ -1,6 +1,7 @@
 export enum WoWItemQualityColor {
   Poor = '#9d9d9d',
   Common = '#ffffff',
+  CommonLightTheme = '#000000DE',
   Uncommon = '#1eff00',
   Rare = '#0070dd',
   Epic = '#a335ee',
