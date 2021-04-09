@@ -46,8 +46,7 @@
                   <template v-slot:item="{ parent, item }">
                     <v-list-item-content>
                       <v-list-item-title
-                        :style="{ color: getItemQualityColor(item.quality) }"
-                        v-html="`${parent.genFilteredText(item.name)}`"
+                        v-html="`${genFilteredColoredText(item.name, getItemQualityColor(item.quality), parent)}`"
                       ></v-list-item-title>
                     </v-list-item-content>
                   </template>
@@ -113,7 +112,7 @@ import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
-import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities } from '@/utilities';
+import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
 import { AuctionTimeSeriesEntry, ConnectedRealm, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
@@ -234,6 +233,22 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
     getItemQualityColor(quality: string): WoWItemQualityColor {
       return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet);
+    },
+
+    genFilteredColoredText(
+      text: string,
+      textColor: string,
+      parent?: { genFilteredText(text: string): string }
+    ): string {
+      let result = parent?.genFilteredText(text) ?? '';
+      const search = '<span';
+      const spanIndex = result.indexOf(search);
+
+      if (spanIndex >= 0) {
+        result = Utilities.insert(result, spanIndex + search.length, ` style="color: ${textColor}"`);
+      }
+
+      return `<span style="color: ${textColor}">${result}</span>`;
     },
 
     useWeekTimeRange(): void {
