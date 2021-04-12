@@ -1,8 +1,9 @@
-import { JSONPatchDocument, Logger } from '@/models/core';
+import { CursorPaginatedResponse, JSONPatchDocument, Logger } from '@/models/core';
 import { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosStatic } from 'axios';
 import { EnvironmentService } from './EnvironmentService';
 import { HttpInterceptors } from '@/utilities/HttpInterceptors';
 import { HttpMethod } from '@/models';
+import { CursorPaginationParameters } from '@/models/queryParameters';
 
 export abstract class WoWMarketWatcherBaseService {
   protected readonly logger: Logger;
@@ -25,6 +26,29 @@ export abstract class WoWMarketWatcherBaseService {
     HttpInterceptors.useCorrelationIdInterceptor(this.httpClient, logger);
     HttpInterceptors.useGetNotFoundNullInterceptor(this.httpClient, logger);
     HttpInterceptors.useRetryInterceptor(this.httpClient, retryOptions, logger);
+  }
+
+  protected async getAll<T = unknown>(
+    fetchPage: (queryParams: CursorPaginationParameters) => Promise<AxiosResponse<CursorPaginatedResponse<T>>>
+  ): Promise<T[]> {
+    let results: T[] = [];
+
+    const {
+      data: { nodes = [], pageInfo }
+    } = await fetchPage({ first: 100 });
+
+    results = [...results, ...nodes];
+    let prevPage = pageInfo;
+
+    while (prevPage.hasNextPage && prevPage.endCursor) {
+      const {
+        data: { nodes: nextNodes = [], pageInfo: nextPageInfo }
+      } = await fetchPage({ first: 100, after: prevPage.endCursor });
+      prevPage = nextPageInfo;
+      results = [...results, ...nextNodes];
+    }
+
+    return results;
   }
 
   protected async get<T = unknown>(

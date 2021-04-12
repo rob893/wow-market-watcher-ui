@@ -80,7 +80,6 @@ export interface CursorPaginatedResponse<TEntity> {
   edges?: CursorPaginatedResponseEdge<TEntity>;
   nodes?: TEntity[];
   pageInfo: CursorPaginatedResponsePageInfo;
-  totalCount?: number;
 }
 
 export interface CursorPaginatedResponseEdge<TEntity> {
@@ -93,6 +92,8 @@ export interface CursorPaginatedResponsePageInfo {
   endCursor: string | null;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  pageCount: number;
+  totalCount?: number;
 }
 
 export interface JSONPatchDocument {
