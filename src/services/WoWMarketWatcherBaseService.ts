@@ -1,5 +1,5 @@
-import { CursorPaginatedResponse, JSONPatchDocument, Logger } from '@/models/core';
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosStatic } from 'axios';
+import { CursorPaginatedResponse, HttpClientFactory, JSONPatchDocument, Logger } from '@/models/core';
+import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentService } from './EnvironmentService';
 import { HttpInterceptors } from '@/utilities/HttpInterceptors';
 import { HttpMethod } from '@/models';
@@ -12,7 +12,11 @@ export abstract class WoWMarketWatcherBaseService {
 
   private readonly inProgressRequestMap: Map<string, Promise<AxiosResponse>> = new Map();
 
-  public constructor(axiosStatic: AxiosStatic, environmentService: EnvironmentService, logger: Logger) {
+  public constructor(
+    httpClientFactory: HttpClientFactory<AxiosInstance, AxiosRequestConfig>,
+    environmentService: EnvironmentService,
+    logger: Logger
+  ) {
     const { wowMarketWatcherBaseUrl: baseURL, retryOptions } = environmentService;
 
     if (!baseURL) {
@@ -20,7 +24,7 @@ export abstract class WoWMarketWatcherBaseService {
     }
 
     this.logger = logger;
-    this.httpClient = axiosStatic.create({ baseURL });
+    this.httpClient = httpClientFactory.create({ baseURL });
 
     HttpInterceptors.useLoggingInterceptor(this.httpClient, logger);
     HttpInterceptors.useCorrelationIdInterceptor(this.httpClient, logger);
@@ -28,28 +32,24 @@ export abstract class WoWMarketWatcherBaseService {
     HttpInterceptors.useRetryInterceptor(this.httpClient, retryOptions, logger);
   }
 
-  protected async getAll<T = unknown, TParams extends CursorPaginationParameters = CursorPaginationParameters>(
-    url: string,
-    queryParams?: Omit<TParams, 'after' | 'before' | 'last' | 'includeEdges'>
+  protected async getAllPages<T = unknown, TParams extends CursorPaginationParameters = CursorPaginationParameters>(
+    getPage: (queryParams: TParams) => Promise<CursorPaginatedResponse<T>>,
+    queryParams: Omit<TParams, 'after' | 'before' | 'last' | 'includeEdges'>
   ): Promise<T[]> {
-    const params: CursorPaginationParameters = { ...queryParams };
+    const params = { ...queryParams } as TParams;
     params.first ??= 100;
     params.includeEdges = false;
 
     let results: T[] = [];
 
-    const {
-      data: { nodes = [], pageInfo }
-    } = await this.get<CursorPaginatedResponse<T>>(url, { params });
+    const { nodes = [], pageInfo } = await getPage(params);
 
     results = [...results, ...nodes];
     let prevPage = pageInfo;
 
     while (prevPage.hasNextPage && prevPage.endCursor) {
       params.after = prevPage.endCursor;
-      const {
-        data: { nodes: nextNodes = [], pageInfo: nextPageInfo }
-      } = await this.get<CursorPaginatedResponse<T>>(url, { params });
+      const { nodes: nextNodes = [], pageInfo: nextPageInfo } = await getPage(params);
       prevPage = nextPageInfo;
       results = [...results, ...nextNodes];
     }

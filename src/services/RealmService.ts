@@ -1,8 +1,8 @@
 import querystring from 'query-string';
-import axios, { AxiosStatic } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { cloneDeep } from 'lodash';
 import { LRUCache } from 'typescript-lru-cache';
-import { ConnectedRealm, CursorPaginatedResponse, Logger, OrderByOptions, Realm } from '@/models';
+import { ConnectedRealm, CursorPaginatedResponse, HttpClientFactory, Logger, OrderByOptions, Realm } from '@/models';
 import { authService, AuthService } from './AuthService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
@@ -14,13 +14,13 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, Realm | Realm[] | ConnectedRealm | ConnectedRealm[]>;
 
   public constructor(
-    axiosStatic: AxiosStatic,
+    httpClientFactory: HttpClientFactory<AxiosInstance, AxiosRequestConfig>,
     authService: AuthService,
     environmentService: EnvironmentService,
     cache: LRUCache,
     logger: Logger
   ) {
-    super(axiosStatic, authService, environmentService, logger);
+    super(httpClientFactory, authService, environmentService, logger);
     this.cache = cache;
   }
 

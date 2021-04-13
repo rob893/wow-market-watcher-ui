@@ -1,4 +1,4 @@
-import axios, { AxiosStatic } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import jwtDecode, { JwtPayload } from 'jwt-decode';
 import { v4 as uuid } from 'uuid';
 import { Subject } from 'rxjs';
@@ -6,7 +6,7 @@ import { LoginResponse, RefreshTokenResponse, RegisterResponse } from '@/models/
 import { LocalStorageService, localStorageService as localStorageServiceInstance } from './LocalStorageService';
 import { User } from '@/models/entities';
 import { WoWMarketWatcherBaseService } from './WoWMarketWatcherBaseService';
-import { Logger, RegisterUserRequest } from '@/models';
+import { HttpClientFactory, Logger, RegisterUserRequest } from '@/models';
 import { loggerService } from './LoggerService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
 
@@ -34,12 +34,12 @@ export class AuthService extends WoWMarketWatcherBaseService {
   private cachedLoggedInUser: User | null = null;
 
   public constructor(
-    axiosStatic: AxiosStatic,
+    httpClientFactory: HttpClientFactory<AxiosInstance, AxiosRequestConfig>,
     localStorageService: LocalStorageService,
     environmentService: EnvironmentService,
     logger: Logger
   ) {
-    super(axiosStatic, environmentService, logger);
+    super(httpClientFactory, environmentService, logger);
     this.localStorageService = localStorageService;
   }
 

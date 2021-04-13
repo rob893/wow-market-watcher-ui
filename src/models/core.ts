@@ -106,6 +106,10 @@ export interface Indexable<TValue = any> {
   [key: string]: TValue;
 }
 
+export interface HttpClientFactory<TClient, TClientOptions> {
+  create(options?: TClientOptions): TClient;
+}
+
 export enum WoWMarketWatcherServiceHeader {
   CorrelationId = 'x-correlation-id',
   TokenExpired = 'x-token-expired'
