@@ -13,13 +13,13 @@ export class UISettingsService {
 
   public get darkThemeSet(): boolean {
     if (!this.cachedDarkThemeSet) {
-      const userFromLocalStorage = this.localStorageService.getItem(this.darkThemeSetKey);
+      const savedSetting = this.localStorageService.getItem(this.darkThemeSetKey);
 
-      if (!userFromLocalStorage) {
-        return false;
+      if (!savedSetting) {
+        return true;
       }
 
-      this.cachedDarkThemeSet = userFromLocalStorage === 'true';
+      this.cachedDarkThemeSet = savedSetting === 'true';
     }
 
     return this.cachedDarkThemeSet;

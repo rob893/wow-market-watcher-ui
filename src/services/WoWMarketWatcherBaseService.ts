@@ -28,22 +28,28 @@ export abstract class WoWMarketWatcherBaseService {
     HttpInterceptors.useRetryInterceptor(this.httpClient, retryOptions, logger);
   }
 
-  protected async getAll<T = unknown>(
-    fetchPage: (queryParams: CursorPaginationParameters) => Promise<AxiosResponse<CursorPaginatedResponse<T>>>
+  protected async getAll<T = unknown, TParams extends CursorPaginationParameters = CursorPaginationParameters>(
+    url: string,
+    queryParams?: Omit<TParams, 'after' | 'before' | 'last' | 'includeEdges'>
   ): Promise<T[]> {
+    const params: CursorPaginationParameters = { ...queryParams };
+    params.first ??= 100;
+    params.includeEdges = false;
+
     let results: T[] = [];
 
     const {
       data: { nodes = [], pageInfo }
-    } = await fetchPage({ first: 100 });
+    } = await this.get<CursorPaginatedResponse<T>>(url, { params });
 
     results = [...results, ...nodes];
     let prevPage = pageInfo;
 
     while (prevPage.hasNextPage && prevPage.endCursor) {
+      params.after = prevPage.endCursor;
       const {
         data: { nodes: nextNodes = [], pageInfo: nextPageInfo }
-      } = await fetchPage({ first: 100, after: prevPage.endCursor });
+      } = await this.get<CursorPaginatedResponse<T>>(url, { params });
       prevPage = nextPageInfo;
       results = [...results, ...nextNodes];
     }

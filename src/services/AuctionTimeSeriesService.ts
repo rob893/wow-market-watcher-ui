@@ -4,7 +4,7 @@ import { LRUCache } from 'typescript-lru-cache';
 import { AuctionTimeSeriesEntry } from '@/models/entities';
 import { AuthService, authService } from './AuthService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
-import { CursorPaginatedResponse, Logger, OrderByOptions } from '@/models/core';
+import { Logger, OrderByOptions } from '@/models/core';
 import { EnvironmentService, environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 import { AuctionTimeSeriesQueryParameters } from '@/models/queryParameters';
@@ -25,10 +25,9 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
   }
 
   public async getAuctionTimeSeries(
-    queryParams: AuctionTimeSeriesQueryParameters,
+    queryParams: Omit<AuctionTimeSeriesQueryParameters, 'first' | 'after' | 'before' | 'last' | 'includeEdges'>,
     orderByOptions?: OrderByOptions<AuctionTimeSeriesEntry>
   ): Promise<AuctionTimeSeriesEntry[]> {
-    queryParams.includeEdges = false;
     const query = querystring.stringify(queryParams);
     const url = `wow/auctionTimeSeries?${query}`;
 
@@ -42,9 +41,7 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
       return cachedEntry;
     }
 
-    const {
-      data: { nodes = [] }
-    } = await this.get<CursorPaginatedResponse<AuctionTimeSeriesEntry>>(url);
+    const nodes = await this.getAll<AuctionTimeSeriesEntry>(url, { first: 250 });
 
     this.cache.set(url, nodes, { onEntryEvicted: ({ key }) => this.logger.info(`Entry with key ${key} has expired.`) });
 
