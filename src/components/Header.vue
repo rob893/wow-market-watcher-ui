@@ -79,7 +79,7 @@
 
       <v-spacer />
 
-      <v-text-field placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
+      <v-text-field class="mt-5" placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
 
       <v-spacer />
 

@@ -6,5 +6,6 @@ export enum RouteName {
   WatchLists = 'WatchLists',
   WatchList = 'WatchList',
   Test = 'Test',
-  NotFound = 'NotFound'
+  NotFound = 'NotFound',
+  Forbidden = 'Forbidden'
 }

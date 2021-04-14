@@ -6,8 +6,10 @@ import Test from '@/views/Test.vue';
 import WatchLists from '@/views/WatchLists.vue';
 import WatchList from '@/views/WatchList.vue';
 import NotFound from '@/views/NotFound.vue';
+import Forbidden from '@/views/Forbidden.vue';
 import { authService } from '@/services/AuthService';
 import { RouteName } from './RouteName';
+import { HttpStatusCode } from '@/models';
 
 Vue.use(VueRouter);
 
@@ -53,6 +55,11 @@ const router = new VueRouter({
       component: NotFound
     },
     {
+      path: '/forbidden',
+      name: RouteName.Forbidden,
+      component: Forbidden
+    },
+    {
       path: '*',
       name: RouteName.Default,
       component: WatchLists
@@ -64,7 +71,8 @@ const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
   RouteName.Login,
   RouteName.About,
   RouteName.Register,
-  RouteName.NotFound
+  RouteName.NotFound,
+  RouteName.Forbidden
 ]);
 
 router.beforeEach((to, _from, next) => {
@@ -75,8 +83,12 @@ router.beforeEach((to, _from, next) => {
   }
 });
 
-authService.unauthorizedActionAttempted.subscribe(() => {
-  authService.logout();
+authService.unauthorizedActionAttempted.subscribe(status => {
+  if (status === HttpStatusCode.Forbidden) {
+    router.push({ name: RouteName.Forbidden });
+  } else {
+    authService.logout();
+  }
 });
 
 authService.authChanged.subscribe(authStatus => {
