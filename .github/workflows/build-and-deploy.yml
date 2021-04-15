@@ -78,7 +78,7 @@ jobs:
         uses: actions/download-artifact@v2
       - name: Copy to build directory
         run: cp -r wow-market-watcher-ui-b${{ github.run_number }}-v* dist
-      - name: Deploy 🚀
+      - name: Deploy to Github Pages
         uses: JamesIves/github-pages-deploy-action@4.1.1
         with:
           branch: gh-pages
