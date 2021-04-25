@@ -27,7 +27,7 @@ export class LocalStorageService {
     return item;
   }
 
-  public getParsedItem<T extends Record<keyof T, unknown> | unknown[]>(key: string): T | null {
+  public getParsedItem<T = unknown>(key: string): T | null {
     this.logger.debug(`${LocalStorageService.name}.${this.getParsedItem.name}: Getting item for key '${key}'.`);
 
     const item = this.getItem(key);

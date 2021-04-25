@@ -45,9 +45,18 @@
                 <v-alert v-if="errorMessage" type="error">{{ errorMessage }}</v-alert>
 
                 <v-text-field
+                  v-model="registerForm.email"
+                  type="email"
+                  :rules="registerForm.emailRules"
+                  label="Email*"
+                  required
+                />
+
+                <v-text-field
                   v-model="registerForm.username"
                   :rules="registerForm.usernameRules"
                   label="Username*"
+                  autocomplete="username"
                   required
                 />
 
@@ -56,30 +65,15 @@
                   type="password"
                   :rules="registerForm.passwordRules"
                   label="Password*"
-                  required
-                />
-
-                <v-text-field type="password" :rules="confirmPasswordRules" label="Confirm Password*" required />
-
-                <v-text-field
-                  v-model="registerForm.firstName"
-                  :rules="registerForm.firstNameRules"
-                  label="First Name*"
+                  autocomplete="new-password"
                   required
                 />
 
                 <v-text-field
-                  v-model="registerForm.lastName"
-                  :rules="registerForm.lastNameRules"
-                  label="Last Name*"
-                  required
-                />
-
-                <v-text-field
-                  v-model="registerForm.email"
-                  type="email"
-                  :rules="registerForm.emailRules"
-                  label="Email*"
+                  type="password"
+                  :rules="confirmPasswordRules"
+                  label="Confirm Password*"
+                  autocomplete="new-password"
                   required
                 />
 
@@ -137,10 +131,6 @@ export default Vue.extend({
           (password && password.length >= 6 && password.length <= 256) ||
           'Password must be between 6 and 256 characters long.'
       ],
-      firstName: null as string | null,
-      firstNameRules: [(firstName: string) => !!firstName || 'First name is required'],
-      lastName: null as string | null,
-      lastNameRules: [(lastName: string) => !!lastName || 'Last name is required'],
       email: null as string | null,
       emailRules: [(email: string) => !!email || 'Email is required'],
       formValid: false
@@ -151,9 +141,9 @@ export default Vue.extend({
 
   methods: {
     async register(): Promise<void> {
-      const { username, password, formValid, firstName, lastName, email } = this.registerForm;
+      const { username, password, formValid, email } = this.registerForm;
 
-      if (!formValid || !password || !username || !firstName || !lastName || !email) {
+      if (!formValid || !password || !username || !email) {
         this.errorMessage = 'Invalid form.';
         return;
       }
@@ -163,8 +153,6 @@ export default Vue.extend({
         await authService.registerUser({
           username,
           password,
-          firstName,
-          lastName,
           email
         });
         this.errorMessage = null;
