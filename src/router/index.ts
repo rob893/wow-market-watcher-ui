@@ -5,6 +5,7 @@ import Login from '@/views/Login.vue';
 import Test from '@/views/Test.vue';
 import WatchLists from '@/views/WatchLists.vue';
 import WatchList from '@/views/WatchList.vue';
+import Privacy from '@/views/Privacy.vue';
 import NotFound from '@/views/NotFound.vue';
 import Forbidden from '@/views/Forbidden.vue';
 import { authService } from '@/services/AuthService';
@@ -50,6 +51,11 @@ const router = new VueRouter({
       component: Test
     },
     {
+      path: '/privacy',
+      name: RouteName.Privacy,
+      component: Privacy
+    },
+    {
       path: '/not-found',
       name: RouteName.NotFound,
       component: NotFound
@@ -72,7 +78,9 @@ const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
   RouteName.About,
   RouteName.Register,
   RouteName.NotFound,
-  RouteName.Forbidden
+  RouteName.Forbidden,
+  RouteName.FAQ,
+  RouteName.Privacy
 ]);
 
 router.beforeEach((to, _from, next) => {

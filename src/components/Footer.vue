@@ -1,30 +1,39 @@
 <template>
   <v-footer absolute padless app>
-    <v-card flat tile class="text-center">
-      <v-card-text>
-        <v-btn
-          v-for="icon in ['mdi-facebook', 'mdi-twitter', 'mdi-linkedin', 'mdi-instagram']"
-          :key="icon"
-          class="mx-4"
-          icon
-        >
-          <v-icon size="24px">
-            {{ icon }}
-          </v-icon>
-        </v-btn>
-      </v-card-text>
+    <v-card flat tile width="100%">
+      <v-row>
+        <v-col cols="4">
+          <v-card-text>
+            <h3>About</h3>
+            <ul class="footer-list">
+              <li><router-link to="/privacy">Privacy</router-link></li>
+              <li>FAQ</li>
+            </ul>
+          </v-card-text>
+        </v-col>
 
-      <v-card-text class="pt-0">
-        Phasellus feugiat arcu sapien, et iaculis ipsum elementum sit amet. Mauris cursus commodo interdum. Praesent ut
-        risus eget metus luctus accumsan id ultrices nunc. Sed at orci sed massa consectetur dignissim a sit amet dui.
-        Duis commodo vitae velit et faucibus. Morbi vehicula lacinia malesuada. Nulla placerat augue vel ipsum ultrices,
-        cursus iaculis dui sollicitudin. Vestibulum eu ipsum vel diam elementum tempor vel ut orci. Orci varius natoque
-        penatibus et magnis dis parturient montes, nascetur ridiculus mus.
-      </v-card-text>
+        <v-col cols="4">
+          <v-card-text>
+            <h3>Contact</h3>
+            <ul class="footer-list">
+              <li><strong>Email:</strong> <a href="mailto:rwherber@gmail.com">rwherber@gmail.com</a></li>
+            </ul>
+          </v-card-text>
+        </v-col>
+
+        <v-col cols="4">
+          <v-card-text>
+            World of Warcraft, Warcraft and Blizzard Entertainment are trademarks or registered trademarks of Blizzard
+            Entertainment, Inc. in the U.S. and/or other countries.
+          </v-card-text>
+        </v-col>
+      </v-row>
 
       <v-divider></v-divider>
 
-      <v-card-text> &copy; {{ new Date().getFullYear() }} — <strong>Robert Herber</strong> </v-card-text>
+      <v-card-text class="text-center"
+        >&copy; {{ new Date().getFullYear() }} — <strong>Robert Herber</strong></v-card-text
+      >
     </v-card>
   </v-footer>
 </template>
@@ -36,3 +45,10 @@ export default Vue.extend({
   name: 'Footer'
 });
 </script>
+
+<style scoped>
+.footer-list {
+  list-style: none;
+  padding-left: 0;
+}
+</style>
