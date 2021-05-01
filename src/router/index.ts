@@ -8,7 +8,7 @@ import WatchList from '@/views/WatchList.vue';
 import Privacy from '@/views/Privacy.vue';
 import NotFound from '@/views/NotFound.vue';
 import Forbidden from '@/views/Forbidden.vue';
-import { authService } from '@/services/AuthService';
+import { authService, loadingService } from '@/services';
 import { RouteName } from './RouteName';
 import { HttpStatusCode } from '@/models';
 
@@ -84,6 +84,8 @@ const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
 ]);
 
 router.beforeEach((to, _from, next) => {
+  loadingService.stopLoading();
+
   if (!unauthenticatedRoutes.has(to.name) && !authService.isUserLoggedIn) {
     next({ name: RouteName.Login });
   } else {

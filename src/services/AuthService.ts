@@ -13,7 +13,7 @@ import { environmentService, EnvironmentService } from './EnvironmentService';
 export class AuthService extends WoWMarketWatcherBaseService {
   public readonly authChanged: Subject<boolean> = new Subject();
 
-  public readonly unauthorizedActionAttempted: Subject<number> = new Subject();
+  public readonly unauthorizedActionAttempted: Subject<number | void> = new Subject();
 
   private readonly localStorageService: LocalStorageService;
 
