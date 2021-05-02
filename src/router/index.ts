@@ -7,6 +7,7 @@ import WatchLists from '@/views/WatchLists.vue';
 import WatchList from '@/views/WatchList.vue';
 import Privacy from '@/views/Privacy.vue';
 import NotFound from '@/views/NotFound.vue';
+import FAQ from '@/views/FAQ.vue';
 import Forbidden from '@/views/Forbidden.vue';
 import { authService, loadingService } from '@/services';
 import { RouteName } from './RouteName';
@@ -16,14 +17,6 @@ Vue.use(VueRouter);
 
 const router = new VueRouter({
   routes: [
-    {
-      path: '/about',
-      name: RouteName.About,
-      // route level code-splitting
-      // this generates a separate chunk (about.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
-    },
     {
       path: '/register',
       name: RouteName.Register,
@@ -51,6 +44,11 @@ const router = new VueRouter({
       component: Test
     },
     {
+      path: '/faq',
+      name: RouteName.FAQ,
+      component: FAQ
+    },
+    {
       path: '/privacy',
       name: RouteName.Privacy,
       component: Privacy
@@ -75,7 +73,6 @@ const router = new VueRouter({
 
 const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
   RouteName.Login,
-  RouteName.About,
   RouteName.Register,
   RouteName.NotFound,
   RouteName.Forbidden,

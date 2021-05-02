@@ -7,7 +7,7 @@
             <h3>About</h3>
             <ul class="footer-list">
               <li><router-link to="/privacy">Privacy</router-link></li>
-              <li>FAQ</li>
+              <li><router-link to="/faq">FAQ</router-link></li>
             </ul>
           </v-card-text>
         </v-col>
@@ -16,7 +16,7 @@
           <v-card-text>
             <h3>Contact</h3>
             <ul class="footer-list">
-              <li><strong>Email:</strong> <a href="mailto:rwherber@gmail.com">rwherber@gmail.com</a></li>
+              <li><strong>Email:</strong> <a href="mailto:nyi@example.com">nyi@example.com</a></li>
             </ul>
           </v-card-text>
         </v-col>
@@ -31,9 +31,7 @@
 
       <v-divider></v-divider>
 
-      <v-card-text class="text-center"
-        >&copy; {{ new Date().getFullYear() }} — <strong>Robert Herber</strong></v-card-text
-      >
+      <v-card-text class="text-center">&copy; {{ new Date().getFullYear() }}</v-card-text>
     </v-card>
   </v-footer>
 </template>

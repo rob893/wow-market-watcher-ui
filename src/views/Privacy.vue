@@ -62,7 +62,7 @@
 
       <v-card-title>CONTACT US</v-card-title>
       <v-card-text
-        >If you have any questions regarding this privacy policy, please contact us at rwherber@gmail.com.</v-card-text
+        >If you have any questions regarding this privacy policy, please contact us at nyi@example.com.</v-card-text
       >
 
       <v-card-title>PRIVACY POLICY CHANGES</v-card-title>

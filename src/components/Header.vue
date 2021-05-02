@@ -29,24 +29,6 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item link to="/about">
-          <v-list-item-action>
-            <v-icon>mdi-information</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>About</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item v-if="isUserLoggedIn" link to="/test">
-          <v-list-item-action>
-            <v-icon>mdi-information</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>Test</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
         <v-list-item link @click="showSettings = true">
           <v-list-item-action>
             <v-icon>mdi-cog</v-icon>
@@ -87,8 +69,6 @@
         <v-btn v-if="!isUserLoggedIn" link to="/login" text>Login</v-btn>
         <v-btn v-if="!isUserLoggedIn" link to="/register" text>Sign Up</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/watch-lists" text>Watch Lists</v-btn>
-        <v-btn link to="/about" text>About</v-btn>
-        <v-btn v-if="isUserLoggedIn" link to="/test" text>Test</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="showSettings = true" text>Settings</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>
       </div>

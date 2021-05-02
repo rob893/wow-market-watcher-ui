@@ -156,7 +156,7 @@
             Population: {{ list.population }}
           </v-card-text>
           <v-card-actions>
-            <v-btn @click="goToWatchList(list.id)"><v-icon left> mdi-details </v-icon>Details</v-btn>
+            <v-btn color="accent" @click="goToWatchList(list.id)"><v-icon left> mdi-view-list </v-icon>View</v-btn>
             <v-btn color="primary" @click="stageEditWatchList(list)"><v-icon left> mdi-pencil </v-icon>Edit</v-btn>
             <v-btn
               color="error"
