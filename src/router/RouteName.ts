@@ -1,4 +1,5 @@
 export enum RouteName {
+  Account = 'Account',
   Register = 'Register',
   Login = 'Login',
   Default = 'Default',

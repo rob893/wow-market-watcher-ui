@@ -29,12 +29,12 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item link @click="showSettings = true">
+        <v-list-item v-if="isUserLoggedIn" link to="/account">
           <v-list-item-action>
-            <v-icon>mdi-cog</v-icon>
+            <v-icon>mdi-account</v-icon>
           </v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>Settings</v-list-item-title>
+            <v-list-item-title>Account</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -69,7 +69,7 @@
         <v-btn v-if="!isUserLoggedIn" link to="/login" text>Login</v-btn>
         <v-btn v-if="!isUserLoggedIn" link to="/register" text>Sign Up</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/watch-lists" text>Watch Lists</v-btn>
-        <v-btn v-if="isUserLoggedIn" @click="showSettings = true" text>Settings</v-btn>
+        <v-btn v-if="isUserLoggedIn" link to="/account" text>Account</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>
       </div>
 
@@ -81,23 +81,6 @@
         color="deep-purple accent-4"
       ></v-progress-linear>
     </v-app-bar>
-
-    <v-dialog width="500" v-model="showSettings">
-      <v-card>
-        <v-card-title> Settings </v-card-title>
-
-        <v-card-actions>
-          <v-switch v-model="isDarkThemeSet" label="Dark Theme"></v-switch>
-        </v-card-actions>
-
-        <v-divider></v-divider>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="error" text @click="showSettings = false"> Close </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -105,7 +88,6 @@
 import Vue from 'vue';
 import { Subscription } from 'rxjs';
 import { authService } from '@/services/AuthService';
-import { uiSettingsService } from '@/services/UISettingsService';
 import { environmentService } from '@/services/EnvironmentService';
 import { loadingService } from '@/services/LoadingService';
 
@@ -125,19 +107,6 @@ export default Vue.extend({
   methods: {
     logout(): void {
       authService.logout();
-    }
-  },
-
-  computed: {
-    isDarkThemeSet: {
-      get(): boolean {
-        return uiSettingsService.darkThemeSet;
-      },
-
-      set(value: boolean): void {
-        this.$vuetify.theme.dark = value;
-        uiSettingsService.darkThemeSet = value;
-      }
     }
   },
 

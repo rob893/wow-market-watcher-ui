@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
+import Account from '@/views/Account.vue';
 import Register from '@/views/Register.vue';
 import Login from '@/views/Login.vue';
 import Test from '@/views/Test.vue';
@@ -26,6 +27,11 @@ const router = new VueRouter({
       path: '/login',
       name: RouteName.Login,
       component: Login
+    },
+    {
+      path: '/account',
+      name: RouteName.Account,
+      component: Account
     },
     {
       path: '/watch-lists/:id',
