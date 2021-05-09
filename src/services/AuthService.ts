@@ -233,6 +233,10 @@ export class AuthService extends WoWMarketWatcherBaseService {
     return nowUTCSeconds >= exp - expOffsetInSeconds;
   }
 
+  public async confirmEmail(email: string, token: string): Promise<void> {
+    await this.post<void>('auth/confirmEmail', { email, token });
+  }
+
   private handleLoginOrRegisterResponse({ token, refreshToken, user }: LoginResponse | RegisterResponse): void {
     this.cachedAccessToken = token;
     this.cachedRefreshToken = refreshToken;

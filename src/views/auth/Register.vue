@@ -87,7 +87,7 @@
                 </v-card-actions>
 
                 <v-card-actions class="justify-center">
-                  <router-link to="/login">Already signed up? Log in!</router-link>
+                  <router-link to="/auth/login">Already signed up? Log in!</router-link>
                 </v-card-actions>
               </div>
 

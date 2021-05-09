@@ -2,7 +2,7 @@
   <div>
     <v-navigation-drawer v-model="drawer" app clipped temporary>
       <v-list dense>
-        <v-list-item v-if="!isUserLoggedIn" link to="/login">
+        <v-list-item v-if="!isUserLoggedIn" link to="/auth/login">
           <v-list-item-action>
             <v-icon>mdi-login</v-icon>
           </v-list-item-action>
@@ -11,7 +11,7 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item v-if="!isUserLoggedIn" link to="/register">
+        <v-list-item v-if="!isUserLoggedIn" link to="/auth/register">
           <v-list-item-action>
             <v-icon>mdi-login</v-icon>
           </v-list-item-action>
@@ -66,8 +66,8 @@
       <v-spacer />
 
       <div class="hidden-sm-and-down">
-        <v-btn v-if="!isUserLoggedIn" link to="/login" text>Login</v-btn>
-        <v-btn v-if="!isUserLoggedIn" link to="/register" text>Sign Up</v-btn>
+        <v-btn v-if="!isUserLoggedIn" link to="/auth/login" text>Login</v-btn>
+        <v-btn v-if="!isUserLoggedIn" link to="/auth/register" text>Sign Up</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/watch-lists" text>Watch Lists</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/account" text>Account</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>

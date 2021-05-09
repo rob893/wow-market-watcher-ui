@@ -1,8 +1,9 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import Account from '@/views/Account.vue';
-import Register from '@/views/Register.vue';
-import Login from '@/views/Login.vue';
+import Register from '@/views/auth/Register.vue';
+import Login from '@/views/auth/Login.vue';
+import ConfirmEmail from '@/views/auth/ConfirmEmail.vue';
 import Test from '@/views/Test.vue';
 import WatchLists from '@/views/WatchLists.vue';
 import WatchList from '@/views/WatchList.vue';
@@ -19,14 +20,27 @@ Vue.use(VueRouter);
 const router = new VueRouter({
   routes: [
     {
-      path: '/register',
+      path: '/auth/register',
       name: RouteName.Register,
       component: Register
     },
     {
-      path: '/login',
+      path: '/auth/login',
       name: RouteName.Login,
       component: Login
+    },
+    {
+      path: '/auth/confirm-email',
+      name: RouteName.ConfirmEmail,
+      component: ConfirmEmail
+    },
+    {
+      path: '/auth/forgot-password',
+      name: RouteName.ForgotPassword
+    },
+    {
+      path: '/auth/reset-password',
+      name: RouteName.ResetPassword
     },
     {
       path: '/account',
@@ -80,6 +94,9 @@ const router = new VueRouter({
 const unauthenticatedRoutes = new Set<RouteName | string | null | undefined>([
   RouteName.Login,
   RouteName.Register,
+  RouteName.ForgotPassword,
+  RouteName.ResetPassword,
+  RouteName.ConfirmEmail,
   RouteName.NotFound,
   RouteName.Forbidden,
   RouteName.FAQ,

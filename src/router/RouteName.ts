@@ -1,6 +1,9 @@
 export enum RouteName {
   Account = 'Account',
   Register = 'Register',
+  ConfirmEmail = 'ConfirmEmail',
+  ForgotPassword = 'ForgotPassword',
+  ResetPassword = 'ResetPassword',
   Login = 'Login',
   Default = 'Default',
   WatchLists = 'WatchLists',

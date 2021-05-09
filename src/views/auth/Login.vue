@@ -45,7 +45,7 @@
                 </v-card-actions>
 
                 <v-card-actions class="justify-center">
-                  <router-link to="/register">Not signed up yet? Sign up!</router-link>
+                  <router-link to="/auth/register">Not signed up yet? Sign up!</router-link>
                 </v-card-actions>
               </div>
 
