@@ -26,7 +26,7 @@
     "vue": "^2.6.14",
     "vue-chartjs": "^3.5.1",
     "vue-router": "^3.5.1",
-    "vuetify": "^2.5.3"
+    "vuetify": "^2.5.4"
   },
   "devDependencies": {
     "@commitlint/cli": "^12.1.4",
@@ -34,8 +34,8 @@
     "@types/gapi.auth2": "0.0.54",
     "@types/lodash": "^4.14.170",
     "@types/uuid": "^8.3.0",
-    "@typescript-eslint/eslint-plugin": "^4.26.1",
-    "@typescript-eslint/parser": "^4.26.1",
+    "@typescript-eslint/eslint-plugin": "^4.27.0",
+    "@typescript-eslint/parser": "^4.27.0",
     "@vue/cli-plugin-babel": "^4.5.13",
     "@vue/cli-plugin-eslint": "^4.5.13",
     "@vue/cli-plugin-pwa": "^4.5.13",
@@ -47,7 +47,7 @@
     "circular-dependency-plugin": "^5.2.2",
     "eslint": "^7.28.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "eslint-plugin-vue": "^7.11.0",
+    "eslint-plugin-vue": "^7.11.1",
     "husky": "^6.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.3.1",
