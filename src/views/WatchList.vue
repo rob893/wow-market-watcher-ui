@@ -167,16 +167,16 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             const datasets = data.datasets ?? [];
 
             const curr = datasets[tooltipItem.datasetIndex ?? 0];
-            const currMessage = `${curr.label}: ${((curr.data ?? [])[
-              tooltipItem.index ?? 0
-            ] as ChartPoint).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+            const currMessage = `${curr.label}: ${(
+              (curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
+            ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
             if (tooltipItem.datasetIndex === 0) {
               const totalAvailable = datasets.find(d => d.label === 'Total Available');
               return [
-                `${totalAvailable?.label}: ${((totalAvailable?.data ?? [])[
-                  tooltipItem.index ?? 0
-                ] as ChartPoint).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
+                `${totalAvailable?.label}: ${(
+                  (totalAvailable?.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
+                ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
                 currMessage
               ];
             }
