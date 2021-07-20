@@ -77,6 +77,7 @@
           </v-card-subtitle>
 
           <v-card-text>
+            <p>Range Min: {{ getRangeStats(id).rangeMin }}g Range Max: {{ getRangeStats(id).rangeMax }}g</p>
             <line-chart
               v-if="
                 data.datasets &&
@@ -143,6 +144,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
+    rangeStats: new Map<number, { rangeMin: number; rangeMax: number }>(),
     chartDatas: undefined as { data: ChartData; name: string; id: number; itemQuality: string }[] | undefined,
     chartOptions: {
       responsive: true,
@@ -268,6 +270,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       timeSeriesEntries?: [number, AuctionTimeSeriesEntry[]][]
     ): { data: ChartData; name: string; id: number; itemQuality: string }[] {
       const chartDatas: { data: ChartData; name: string; id: number; itemQuality: string }[] = [];
+      this.rangeStats.clear();
 
       for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
         const item = this.wowItems.get(key);
@@ -288,20 +291,33 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             price99: { t: string; y: number }[];
             totalAvailable: { t: string; y: number }[];
           }>(
-            (prev, curr) => ({
-              name: prev.name,
-              id: prev.id,
-              itemQuality: prev.itemQuality,
-              min: [...prev.min, { t: curr.timestamp, y: curr.minPrice / 10000 }],
-              max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
-              average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
-              price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
-              price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
-              price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
-              price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
-              price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }],
-              totalAvailable: [...prev.totalAvailable, { t: curr.timestamp, y: curr.totalAvailableForAuction }]
-            }),
+            (prev, curr) => {
+              const min = curr.minPrice / 10000;
+
+              const stats = this.rangeStats.get(prev.id);
+
+              if (stats) {
+                stats.rangeMin = Math.min(stats.rangeMin, min);
+                stats.rangeMax = Math.max(stats.rangeMax, min);
+              } else {
+                this.rangeStats.set(prev.id, { rangeMin: min, rangeMax: min });
+              }
+
+              return {
+                name: prev.name,
+                id: prev.id,
+                itemQuality: prev.itemQuality,
+                min: [...prev.min, { t: curr.timestamp, y: min }],
+                max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
+                average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
+                price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
+                price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
+                price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
+                price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
+                price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }],
+                totalAvailable: [...prev.totalAvailable, { t: curr.timestamp, y: curr.totalAvailableForAuction }]
+              };
+            },
             {
               name: item?.name ?? 'N/A',
               id: item?.id ?? NaN,
@@ -352,13 +368,13 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
                 label: '50th Percentile',
                 data: mapped.price50,
                 pointRadius: 0,
-                hidden: false
+                hidden: true
               },
               {
                 label: '75th Percentile',
                 data: mapped.price75,
                 pointRadius: 0,
-                hidden: false
+                hidden: true
               },
               {
                 label: '95th Percentile',
@@ -404,6 +420,12 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         default:
           return NaN;
       }
+    },
+
+    getRangeStats(itemId: number): { rangeMin: number; rangeMax: number } {
+      const stats = this.rangeStats.get(itemId);
+
+      return stats ?? { rangeMin: 0, rangeMax: 0 };
     },
 
     async removeItemFromWatchList(itemId: number): Promise<void> {
