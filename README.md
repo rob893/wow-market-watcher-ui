@@ -27,4 +27,4 @@ The services exposes a REST API that:
 ## CICD
 
 All CICD is done through Github Actions.
-All merges into `master` branch will kick off CICD to build the project and deploy it Github pages
+All merges into `master` branch will kick off CICD to build the project and deploy it Github pages.
