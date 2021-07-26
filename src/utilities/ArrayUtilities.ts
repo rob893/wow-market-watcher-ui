@@ -39,7 +39,19 @@ export class ArrayUtilities {
     return success;
   }
 
-  public static orderBy<T>(array: T[], orderByOptions: OrderByOptions<T>): T[] {
+  public static sortAsc<T>(arr: T[]): T[] {
+    return arr.sort((a, b) => {
+      if (a > b) {
+        return 1;
+      } else if (a < b) {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
+  }
+
+  public static orderBy<T extends object>(array: T[], orderByOptions: OrderByOptions<T>): T[] {
     const { orderBy, comparer, direction } = orderByOptions;
 
     if (comparer) {

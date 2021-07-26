@@ -119,3 +119,11 @@ export enum WoWMarketWatcherEvent {
   Confirmed = 'confirmed',
   Canceled = 'canceled'
 }
+
+export interface TimeRangePriceStats {
+  rangeMin: number;
+  rangeMax: number;
+  currentPrice: number;
+  rangePercent: number;
+  currentPriceDescription: string;
+}

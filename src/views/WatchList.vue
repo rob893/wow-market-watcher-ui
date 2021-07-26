@@ -78,6 +78,11 @@
 
           <v-card-text>
             <p>Range Min: {{ getRangeStats(id).rangeMin }}g Range Max: {{ getRangeStats(id).rangeMax }}g</p>
+            <p>
+              Current Price
+              {{ getRangeStats(id).currentPrice }}g ({{ getRangeStats(id).currentPriceDescription }}:
+              {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
+            </p>
             <line-chart
               v-if="
                 data.datasets &&
@@ -114,12 +119,13 @@ import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
 import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
-import { AuctionTimeSeriesEntry, ConnectedRealm, WatchList, WoWItem } from '@/models';
+import { AuctionTimeSeriesEntry, ConnectedRealm, TimeRangePriceStats, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
 import { WoWItemQualityColor } from '@/models/blizzard';
 import { uiSettingsService } from '@/services';
+import { MathUtilities } from '@/utilities/MathUtilities';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -144,7 +150,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
-    rangeStats: new Map<number, { rangeMin: number; rangeMax: number }>(),
+    rangeStats: new Map<number, TimeRangePriceStats>(),
     chartDatas: undefined as { data: ChartData; name: string; id: number; itemQuality: string }[] | undefined,
     chartOptions: {
       responsive: true,
@@ -275,64 +281,91 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
         const item = this.wowItems.get(key);
 
-        const mapped = timeSeries
-          .filter(({ timestamp }) => new Date(timestamp).getTime() > fromTime)
-          .reduce<{
-            name: string;
-            id: number;
-            itemQuality: string;
-            min: { t: string; y: number }[];
-            max: { t: string; y: number }[];
-            average: { t: string; y: number }[];
-            price25: { t: string; y: number }[];
-            price50: { t: string; y: number }[];
-            price75: { t: string; y: number }[];
-            price95: { t: string; y: number }[];
-            price99: { t: string; y: number }[];
-            totalAvailable: { t: string; y: number }[];
-          }>(
-            (prev, curr) => {
-              const min = curr.minPrice / 10000;
+        const range = timeSeries.filter(({ timestamp }) => new Date(timestamp).getTime() > fromTime);
 
-              const stats = this.rangeStats.get(prev.id);
+        const mapped = range.reduce<{
+          name: string;
+          id: number;
+          itemQuality: string;
+          min: { t: string; y: number }[];
+          max: { t: string; y: number }[];
+          average: { t: string; y: number }[];
+          price25: { t: string; y: number }[];
+          price50: { t: string; y: number }[];
+          price75: { t: string; y: number }[];
+          price95: { t: string; y: number }[];
+          price99: { t: string; y: number }[];
+          totalAvailable: { t: string; y: number }[];
+        }>(
+          (prev, curr) => {
+            const min = curr.minPrice / 10000;
 
-              if (stats) {
-                stats.rangeMin = Math.min(stats.rangeMin, min);
-                stats.rangeMax = Math.max(stats.rangeMax, min);
-              } else {
-                this.rangeStats.set(prev.id, { rangeMin: min, rangeMax: min });
-              }
+            const stats = this.rangeStats.get(prev.id);
 
-              return {
-                name: prev.name,
-                id: prev.id,
-                itemQuality: prev.itemQuality,
-                min: [...prev.min, { t: curr.timestamp, y: min }],
-                max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
-                average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
-                price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
-                price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
-                price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
-                price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
-                price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }],
-                totalAvailable: [...prev.totalAvailable, { t: curr.timestamp, y: curr.totalAvailableForAuction }]
-              };
-            },
-            {
-              name: item?.name ?? 'N/A',
-              id: item?.id ?? NaN,
-              itemQuality: item?.quality ?? 'N/A',
-              min: [],
-              max: [],
-              average: [],
-              price25: [],
-              price50: [],
-              price75: [],
-              price95: [],
-              price99: [],
-              totalAvailable: []
+            if (stats) {
+              stats.rangeMin = Math.min(stats.rangeMin, min);
+              stats.rangeMax = Math.max(stats.rangeMax, min);
+              stats.currentPrice = min;
+            } else {
+              this.rangeStats.set(prev.id, {
+                rangeMin: min,
+                rangeMax: min,
+                currentPrice: min,
+                rangePercent: 0,
+                currentPriceDescription: ''
+              });
             }
-          );
+
+            return {
+              name: prev.name,
+              id: prev.id,
+              itemQuality: prev.itemQuality,
+              min: [...prev.min, { t: curr.timestamp, y: min }],
+              max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
+              average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
+              price25: [...prev.price25, { t: curr.timestamp, y: curr.price25Percentile / 10000 }],
+              price50: [...prev.price50, { t: curr.timestamp, y: curr.price50Percentile / 10000 }],
+              price75: [...prev.price75, { t: curr.timestamp, y: curr.price75Percentile / 10000 }],
+              price95: [...prev.price95, { t: curr.timestamp, y: curr.price95Percentile / 10000 }],
+              price99: [...prev.price99, { t: curr.timestamp, y: curr.price99Percentile / 10000 }],
+              totalAvailable: [...prev.totalAvailable, { t: curr.timestamp, y: curr.totalAvailableForAuction }]
+            };
+          },
+          {
+            name: item?.name ?? 'N/A',
+            id: item?.id ?? NaN,
+            itemQuality: item?.quality ?? 'N/A',
+            min: [],
+            max: [],
+            average: [],
+            price25: [],
+            price50: [],
+            price75: [],
+            price95: [],
+            price99: [],
+            totalAvailable: []
+          }
+        );
+
+        const rangeStats = this.rangeStats.get(mapped.id);
+
+        if (rangeStats) {
+          rangeStats.rangePercent =
+            MathUtilities.percentRank(
+              range.map(ts => ts.minPrice / 10000),
+              rangeStats.currentPrice
+            ) * 100;
+
+          const { rangePercent } = rangeStats;
+
+          if (rangePercent <= 25) {
+            rangeStats.currentPriceDescription = 'Cheap';
+          } else if (rangePercent >= 75) {
+            rangeStats.currentPriceDescription = 'Expensive';
+          } else {
+            rangeStats.currentPriceDescription = 'Average';
+          }
+        }
 
         chartDatas.push({
           name: mapped.name,
@@ -422,10 +455,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
-    getRangeStats(itemId: number): { rangeMin: number; rangeMax: number } {
+    getRangeStats(itemId: number): TimeRangePriceStats {
       const stats = this.rangeStats.get(itemId);
 
-      return stats ?? { rangeMin: 0, rangeMax: 0 };
+      return stats ?? { rangeMin: 0, rangeMax: 0, currentPrice: 0, rangePercent: 0, currentPriceDescription: '' };
     },
 
     async removeItemFromWatchList(itemId: number): Promise<void> {
