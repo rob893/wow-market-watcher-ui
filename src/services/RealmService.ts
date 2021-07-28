@@ -151,11 +151,11 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
   }
 
   private getRealmCacheKey(realmId: number): string {
-    return `realm:${realmId}`;
+    return `realms/${realmId}`;
   }
 
   private getConnectedRealmCacheKey(connectedRealmId: number): string {
-    return `connectedRealm:${connectedRealmId}`;
+    return `connectedRealms/${connectedRealmId}`;
   }
 }
 

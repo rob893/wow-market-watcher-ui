@@ -42,14 +42,14 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
     this.cache.set(cacheKey, nodes);
 
     for (const list of nodes) {
-      this.cache.set(this.getWatchListCacheKey(list.id), list);
+      this.cache.set(this.getWatchListCacheKey(userId, list.id), list);
     }
 
     return nodes;
   }
 
   public async getWatchListForUser(userId: number, watchListId: number): Promise<WatchList | null> {
-    const cacheKey = this.getWatchListCacheKey(watchListId);
+    const cacheKey = this.getWatchListCacheKey(userId, watchListId);
     const cachedList = this.cache.get(cacheKey);
 
     if (cachedList) {
@@ -75,20 +75,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   ): Promise<WatchList> {
     const { data } = await this.post<WatchList>(`users/${userId}/watchLists`, createWatchListRequest);
 
-    const newWatchListCacheKey = this.getWatchListCacheKey(data.id);
-    const userWatchListsCacheKey = this.getUserWatchListsCacheKey(userId);
-
-    const cachedUserWatchLists = this.cache.get(userWatchListsCacheKey);
-
-    if (!Array.isArray(cachedUserWatchLists)) {
-      this.cache.delete(userWatchListsCacheKey);
-    }
-
-    this.cache.set(newWatchListCacheKey, data);
-    this.cache.set(userWatchListsCacheKey, [
-      ...(Array.isArray(cachedUserWatchLists) ? cachedUserWatchLists : []),
-      data
-    ]);
+    this.updateCachedUserWatchLists(userId, data);
 
     return data;
   }
@@ -100,7 +87,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   ): Promise<WatchList> {
     const { data } = await this.post<WatchList>(`users/${userId}/watchLists/${watchListId}/items`, addItemRequest);
 
-    this.cache.set(this.getWatchListCacheKey(watchListId), data);
+    this.updateCachedUserWatchLists(userId, data);
 
     return data;
   }
@@ -118,14 +105,14 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
 
     const { data } = await this.patch<WatchList>(`users/${userId}/watchLists/${watchListId}`, patchDoc);
 
-    this.cache.set(this.getWatchListCacheKey(watchListId), data);
+    this.updateCachedUserWatchLists(userId, data);
 
     return data;
   }
 
   public async deleteWatchListForUser(userId: number, watchListId: number): Promise<void> {
     await this.delete(`users/${userId}/watchLists/${watchListId}`);
-    this.cache.delete(this.getWatchListCacheKey(watchListId));
+    this.cache.delete(this.getWatchListCacheKey(userId, watchListId));
 
     const cacheKey = this.getUserWatchListsCacheKey(userId);
     const cachedUserWatchLists = this.cache.get(cacheKey);
@@ -145,28 +132,41 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   public async deleteItemFromWatchListForUser(userId: number, watchListId: number, itemId: number): Promise<WatchList> {
     const { data } = await this.delete<WatchList>(`users/${userId}/watchLists/${watchListId}/items/${itemId}`);
 
-    this.cache.set(this.getWatchListCacheKey(watchListId), data);
+    this.updateCachedUserWatchLists(userId, data);
+
+    return data;
+  }
+
+  private updateCachedUserWatchLists(userId: number, updatedOrNewWatchList: WatchList): void {
+    const { id: watchListId } = updatedOrNewWatchList;
+    this.cache.set(this.getWatchListCacheKey(userId, watchListId), updatedOrNewWatchList);
 
     const cacheKey = this.getUserWatchListsCacheKey(userId);
     const cachedUserWatchLists = this.cache.get(cacheKey);
 
     if (cachedUserWatchLists) {
       if (Array.isArray(cachedUserWatchLists)) {
-        this.cache.set(cacheKey, [...cachedUserWatchLists.filter(list => list.id !== watchListId), data]);
+        const indexToReplace = cachedUserWatchLists.findIndex(list => list.id === watchListId);
+
+        if (indexToReplace >= 0) {
+          cachedUserWatchLists[indexToReplace] = updatedOrNewWatchList;
+        } else {
+          cachedUserWatchLists.push(updatedOrNewWatchList);
+        }
+
+        this.cache.set(cacheKey, cachedUserWatchLists);
       } else {
         this.cache.delete(cacheKey);
       }
     }
-
-    return data;
   }
 
-  private getWatchListCacheKey(watchListId: number): string {
-    return `watchList:${watchListId}`;
+  private getWatchListCacheKey(userId: number, watchListId: number): string {
+    return `users/${userId}/watchLists/${watchListId}`;
   }
 
   private getUserWatchListsCacheKey(userId: number): string {
-    return `userWatchLists:${userId}`;
+    return `users/${userId}/watchLists`;
   }
 }
 
