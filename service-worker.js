@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "precache-manifest.c6139d4db8cf27485cefd41b7fe0e4e7.js"
+  "precache-manifest.65e8a048390778cce48cd907218ba8f0.js"
 );
 
 workbox.core.setCacheNameDetails({prefix: "wow-market-watcher-ui"});
