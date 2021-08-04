@@ -197,13 +197,16 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             position: 'left',
             scaleLabel: {
               display: true,
-              labelString: 'Price'
+              labelString: 'Price (g)'
             },
             gridLines: {
               display: false
             },
             ticks: {
-              callback: label => `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}g`
+              callback: label =>
+                typeof label === 'number' && label >= 1000
+                  ? `${(label / 1000).toLocaleString('en-US', { maximumFractionDigits: 2 })}k`
+                  : `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
             }
           },
           {
@@ -217,7 +220,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               display: false
             },
             ticks: {
-              callback: label => `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+              callback: label =>
+                typeof label === 'number' && label >= 1000
+                  ? `${(label / 1000).toLocaleString('en-US', { maximumFractionDigits: 2 })}k`
+                  : `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
             }
           }
         ]
