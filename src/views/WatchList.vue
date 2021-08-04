@@ -79,11 +79,15 @@
           </v-card-subtitle>
 
           <v-card-text>
-            <p>Range Min: {{ getRangeStats(id).rangeMin }}g Range Max: {{ getRangeStats(id).rangeMax }}g</p>
+            <p>
+              Range Min: {{ getRangeStats(id).rangeMin.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g Range
+              Max: {{ getRangeStats(id).rangeMax.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g
+            </p>
             <p>
               Current Price
-              {{ getRangeStats(id).currentPrice }}g ({{ getRangeStats(id).currentPriceDescription }}:
-              {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
+              {{ getRangeStats(id).currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g ({{
+                getRangeStats(id).currentPriceDescription
+              }}: {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
             </p>
             <line-chart
               v-if="
@@ -171,7 +175,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
               (curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
             ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-            return currMessage;
+            return curr.label === 'Total Available' ? currMessage : `${currMessage}g`;
           }
         }
       },
@@ -189,16 +193,31 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         ],
         yAxes: [
           {
+            id: 'y-axis-price',
             position: 'left',
+            scaleLabel: {
+              display: true,
+              labelString: 'Price'
+            },
             gridLines: {
               display: false
+            },
+            ticks: {
+              callback: label => `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}g`
             }
           },
           {
-            id: 'y-amount',
+            id: 'y-axis-amount',
             position: 'right',
+            scaleLabel: {
+              display: true,
+              labelString: 'Available'
+            },
             gridLines: {
               display: false
+            },
+            ticks: {
+              callback: label => `${label.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
             }
           }
         ]
@@ -378,7 +397,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
                       label: 'Total Available',
                       data: mapped.totalAvailable,
                       borderColor: colors.purple.base,
-                      yAxisID: 'y-amount',
+                      yAxisID: 'y-axis-amount',
                       pointRadius: 0,
                       hidden: false
                     },
