@@ -88,7 +88,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof Line> & Instance
 
     this.$on('chart:update', () => {
       this.chartData.datasets?.forEach((set, i) => {
-        const { gradient, color } = ColorUtilities.getColorGradient(lineColors[i % lineColors.length], context);
+        const { gradient, color } = ColorUtilities.getColorGradient(
+          set.borderColor && typeof set.borderColor === 'string' ? set.borderColor : lineColors[i % lineColors.length],
+          context
+        );
 
         set.backgroundColor ??= gradient;
         set.borderColor ??= color;
