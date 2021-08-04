@@ -1,5 +1,6 @@
 import { WoWItem } from '@/models';
 import { WoWItemQualityColor } from '@/models/blizzard';
+import { Constants } from './Constants';
 
 export interface ColorRGB {
   r: number;
@@ -8,11 +9,19 @@ export interface ColorRGB {
 }
 
 export class ColorUtilities {
-  public static getItemQualityColor(quality: string, darkTheme: boolean): WoWItemQualityColor;
+  public static getItemQualityColor(quality: string, darkTheme: boolean, id?: number): WoWItemQualityColor;
   public static getItemQualityColor(item: WoWItem, darkTheme: boolean): WoWItemQualityColor;
-  public static getItemQualityColor(itemOrQuality: WoWItem | string, darkTheme: boolean): WoWItemQualityColor {
+  public static getItemQualityColor(
+    itemOrQuality: WoWItem | string,
+    darkTheme: boolean,
+    id?: number
+  ): WoWItemQualityColor {
     const quality =
       typeof itemOrQuality === 'string' ? itemOrQuality.toLowerCase() : itemOrQuality.quality.toLowerCase();
+
+    if (((itemOrQuality as WoWItem).id ?? id) === Constants.wowTokenId) {
+      return WoWItemQualityColor.WoWToken;
+    }
 
     switch (quality) {
       case 'poor':

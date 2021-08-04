@@ -46,7 +46,9 @@
                   <template v-slot:item="{ parent, item }">
                     <v-list-item-content>
                       <v-list-item-title
-                        v-html="`${genFilteredColoredText(item.name, getItemQualityColor(item.quality), parent)}`"
+                        v-html="
+                          `${genFilteredColoredText(item.name, getItemQualityColor(item.quality, item.id), parent)}`
+                        "
                       ></v-list-item-title>
                     </v-list-item-content>
                   </template>
@@ -65,7 +67,7 @@
       <v-col v-for="{ data, name, id, itemQuality } in chartDatas" :key="id" cols="12">
         <v-card elevation="2">
           <v-card-title>
-            <span :style="{ color: getItemQualityColor(itemQuality) }">{{ name }}</span>
+            <span :style="{ color: getItemQualityColor(itemQuality, id) }">{{ name }}</span>
 
             <v-spacer />
 
@@ -114,11 +116,12 @@ import {
   wowItemService,
   loadingService
 } from '@/services';
+import colors from 'vuetify/es5/util/colors';
 import LineChart from '@/components/charts/LineChart.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
-import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
+import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities, Constants } from '@/utilities';
 import { AuctionTimeSeriesEntry, ConnectedRealm, TimeRangePriceStats, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
@@ -155,17 +158,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     chartOptions: {
       responsive: true,
       maintainAspectRatio: false,
-      legend: {
-        labels: {
-          filter: (item, data) => {
-            if ((data.datasets ?? [])[item.datasetIndex ?? 0].label === 'Total Available') {
-              return false;
-            }
-
-            return true;
-          }
-        }
-      },
       tooltips: {
         intersect: false,
         mode: 'index',
@@ -178,16 +170,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             const currMessage = `${curr.label}: ${(
               (curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
             ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-
-            if (tooltipItem.datasetIndex === 0) {
-              const totalAvailable = datasets.find(d => d.label === 'Total Available');
-              return [
-                `${totalAvailable?.label}: ${(
-                  (totalAvailable?.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
-                ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
-                currMessage
-              ];
-            }
 
             return currMessage;
           }
@@ -207,6 +189,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         ],
         yAxes: [
           {
+            position: 'left',
+            gridLines: {
+              display: false
+            }
+          },
+          {
+            id: 'y-amount',
+            position: 'right',
             gridLines: {
               display: false
             }
@@ -239,8 +229,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
-    getItemQualityColor(quality: string): WoWItemQualityColor {
-      return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet);
+    getItemQualityColor(quality: string, id: number): WoWItemQualityColor {
+      return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet, id);
     },
 
     genFilteredColoredText(
@@ -372,63 +362,83 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           id: mapped.id,
           itemQuality: mapped.itemQuality,
           data: {
-            datasets: [
-              {
-                label: 'Min',
-                data: mapped.min,
-                pointRadius: 0,
-                hidden: false
-              },
-              {
-                label: 'Max',
-                data: mapped.max,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: 'Average',
-                data: mapped.average,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: '25th Percentile',
-                data: mapped.price25,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: '50th Percentile',
-                data: mapped.price50,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: '75th Percentile',
-                data: mapped.price75,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: '95th Percentile',
-                data: mapped.price95,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: '99th Percentile',
-                data: mapped.price99,
-                pointRadius: 0,
-                hidden: true
-              },
-              {
-                label: 'Total Available',
-                data: mapped.totalAvailable,
-                showLine: false,
-                pointRadius: 0,
-                hidden: true
-              }
-            ]
+            datasets:
+              mapped.id === Constants.wowTokenId // Special logic for WoW Token
+                ? [
+                    {
+                      label: 'Price',
+                      data: mapped.min,
+                      borderColor: colors.cyan.base,
+                      pointRadius: 0,
+                      hidden: false
+                    }
+                  ]
+                : [
+                    {
+                      label: 'Total Available',
+                      data: mapped.totalAvailable,
+                      borderColor: colors.purple.base,
+                      yAxisID: 'y-amount',
+                      pointRadius: 0,
+                      hidden: false
+                    },
+                    {
+                      label: 'Min',
+                      data: mapped.min,
+                      borderColor: colors.cyan.base,
+                      pointRadius: 0,
+                      hidden: false
+                    },
+                    {
+                      label: 'Max',
+                      data: mapped.max,
+                      borderColor: colors.red.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: 'Average',
+                      data: mapped.average,
+                      borderColor: colors.amber.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: '25th Percentile',
+                      data: mapped.price25,
+                      borderColor: colors.indigo.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: '50th Percentile',
+                      data: mapped.price50,
+                      borderColor: colors.green.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: '75th Percentile',
+                      data: mapped.price75,
+                      borderColor: colors.pink.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: '95th Percentile',
+                      data: mapped.price95,
+                      borderColor: colors.blue.base,
+                      pointRadius: 0,
+                      hidden: true
+                    },
+                    {
+                      label: '99th Percentile',
+                      data: mapped.price99,
+                      borderColor: colors.lime.base,
+                      pointRadius: 0,
+                      hidden: true
+                    }
+                  ]
           }
         });
       }

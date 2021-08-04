@@ -19,14 +19,23 @@ export class ChartPluginFactory {
       id: 'verticalLinePlugin',
       afterDatasetsDraw(chart: Chart & { tooltip: any; scales: any }): void {
         if (chart.tooltip?._active && chart.tooltip?._active?.length > 0) {
-          const activePoint = chart.tooltip._active[0],
-            ctx = chart.ctx,
-            yAxis = chart.scales['y-axis-0'],
-            x = activePoint.tooltipPosition().x,
-            topY = yAxis.top,
-            bottomY = yAxis.bottom;
+          const activePoint = chart.tooltip._active[0];
+          const ctx = chart.ctx;
+          const yAxis = Object.entries<{ top: number; bottom: number }>(chart.scales).find(([key]) =>
+            key.startsWith('y-axis-')
+          )?.[1]; // ensure a y axis has id starting with y-axis-.
 
-          if (!ctx) {
+          if (!yAxis) {
+            throw new Error(
+              'No scales with id starting with y-axis- found. Ensure at least one y axis has an id that starts with y-axis-.'
+            );
+          }
+
+          const x = activePoint.tooltipPosition().x;
+          const topY = yAxis.top;
+          const bottomY = yAxis.bottom;
+
+          if (!ctx || !topY || !bottomY) {
             return;
           }
 
