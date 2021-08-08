@@ -61,9 +61,9 @@ jobs:
           name: id_rsa
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
       - name: Clean remote directories
-        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} 'mkdir -p /var/www/html/wow-market-watcher && rm -rf /var/www/html/wow-market-watcher/* '
+        run: ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} 'mkdir -p /var/www/html/wow-market-watcher-ui && rm -rf /var/www/html/wow-market-watcher-ui/* '
       - name: Copy builds to remote server
-        run: scp -r ./wow-market-watcher-ui-b${{ github.run_number }}-v*/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/html/wow-market-watcher
+        run: scp -r ./wow-market-watcher-ui-b${{ github.run_number }}-v*/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/html/wow-market-watcher-ui
 
   deploy-github-pages:
     name: Deploy to Github Pages
