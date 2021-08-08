@@ -17,5 +17,5 @@ export const productionEnvironment: Environment = {
   },
   production: true,
   env: EnvironmentMode.Production,
-  wowMarketWatcherBaseUrl: 'https://rwherber.com/wow-market-watcher/v1/api'
+  wowMarketWatcherBaseUrl: 'https://rwherber.com/wow-market-watcher/api/v1'
 };
