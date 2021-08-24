@@ -28,4 +28,17 @@ export class Utilities {
   public static insert(str: string, index: number, value: string): string {
     return str.substr(0, index) + value + str.substr(index);
   }
+
+  public static convertToGoldSilverCopper(copper: number): { g: number; s: number; c: number } {
+    const c = copper % 100;
+    const silver = copper / 100;
+    const s = silver % 100;
+    const g = silver / 100;
+
+    return {
+      g,
+      s,
+      c
+    };
+  }
 }

@@ -6,15 +6,6 @@
           <v-card-title>{{ watchList.name }}</v-card-title>
           <v-card-text>
             {{ watchList.description }}
-            <!-- <br />
-            {{
-              `Realm${watchListConnectedRealm.realms.length > 1 ? 's' : ''}: ${watchListConnectedRealm.realms
-                .map(r => r.name)
-                .sort()
-                .reduce((prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`)}`
-            }}
-            <br />
-            Population: {{ watchListConnectedRealm.population }} -->
           </v-card-text>
           <v-card-actions>
             <v-row>
@@ -29,36 +20,94 @@
               <v-spacer />
 
               <v-col>
-                <v-autocomplete
-                  v-model="selectedItemId"
-                  :items="items"
-                  :loading="itemsLoading"
-                  :search-input.sync="itemsSearchTerm"
-                  cache-items
-                  item-text="name"
-                  item-value="id"
-                  class="mx-4"
-                  hide-no-data
-                  hide-details
-                  label="Items"
-                  @change="disableWoWHeadLinks"
-                >
-                  <template v-slot:item="{ parent, item }">
-                    <v-list-item-content>
-                      <v-list-item-title
-                        v-html="
-                          `${genFilteredColoredText(item.name, getItemQualityColor(item.quality, item.id), parent)}`
-                        "
-                      ></v-list-item-title>
-                    </v-list-item-content>
+                <v-dialog v-model="addNewItemToWatchList.showDialog" persistent max-width="600px">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn color="success" dark v-bind="attrs" v-on="on"
+                      ><v-icon left> mdi-plus </v-icon> Add Item
+                    </v-btn>
                   </template>
-                </v-autocomplete>
-              </v-col>
+                  <v-card>
+                    <v-form
+                      ref="addItemToWatchListForm"
+                      v-model="addNewItemToWatchList.formValid"
+                      @submit.prevent="addSelectedItemToWatchList"
+                    >
+                      <v-card-title>
+                        <span class="headline">Add Item to Watch List</span>
+                      </v-card-title>
 
-              <v-col>
-                <v-btn color="success" @click="addSelectedItemToWatchList" :disabled="selectedItemId === null"
-                  ><v-icon left> mdi-plus </v-icon>Add Item</v-btn
-                >
+                      <v-card-text>
+                        <v-container>
+                          <v-row>
+                            <v-autocomplete
+                              v-model="addNewItemToWatchList.selectedItemId"
+                              :items="items"
+                              :loading="itemsLoading"
+                              :search-input.sync="itemsSearchTerm"
+                              cache-items
+                              item-text="name"
+                              item-value="id"
+                              class="mx-4"
+                              hide-no-data
+                              hide-details
+                              label="Items"
+                              @change="disableWoWHeadLinks"
+                            >
+                              <template v-slot:item="{ parent, item }">
+                                <v-list-item-content>
+                                  <v-list-item-title
+                                    v-html="
+                                      `${genFilteredColoredText(
+                                        item.name,
+                                        getItemQualityColor(item.quality, item.id),
+                                        parent
+                                      )}`
+                                    "
+                                  ></v-list-item-title>
+                                </v-list-item-content>
+                              </template>
+                            </v-autocomplete>
+
+                            <v-col cols="12" sm="6">
+                              <v-autocomplete
+                                v-model="addNewItemToWatchList.selectedRealmId"
+                                :items="realms"
+                                item-text="name"
+                                item-value="id"
+                                class="mx-4"
+                                hide-no-data
+                                hide-details
+                                label="Realm"
+                              ></v-autocomplete>
+                            </v-col>
+                          </v-row>
+                        </v-container>
+                        <small>*indicates required field</small>
+                      </v-card-text>
+
+                      <v-card-actions v-if="addNewItemToWatchList.loading" class="justify-center">
+                        <v-progress-circular indeterminate color="primary" />
+                      </v-card-actions>
+
+                      <v-card-actions v-else>
+                        <v-spacer></v-spacer>
+                        <v-btn
+                          color="blue darken-1"
+                          text
+                          @click="
+                            addNewItemToWatchList.showDialog = false;
+                            resetAddItemToWatchListForm();
+                          "
+                        >
+                          Close
+                        </v-btn>
+                        <v-btn color="blue darken-1" text type="submit" :disabled="!addNewItemToWatchList.formValid">
+                          Create
+                        </v-btn>
+                      </v-card-actions>
+                    </v-form>
+                  </v-card>
+                </v-dialog>
               </v-col>
             </v-row>
           </v-card-actions>
@@ -70,6 +119,7 @@
           watchedItem: {
             id,
             wowItemId,
+            connectedRealmId,
             wowItem: { quality, name }
           }
         } in chartDatas"
@@ -90,16 +140,24 @@
           </v-card-subtitle>
 
           <v-card-text>
-            <p>
-              Range Min: {{ getRangeStats(id).rangeMin.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g Range
-              Max: {{ getRangeStats(id).rangeMax.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g
-            </p>
-            <p>
-              Current Price
-              {{ getRangeStats(id).currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g ({{
-                getRangeStats(id).currentPriceDescription
-              }}: {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
-            </p>
+            {{
+              `Realm${getConnectedRealm(connectedRealmId).realms.length > 1 ? 's' : ''}: ${getConnectedRealm(
+                connectedRealmId
+              )
+                .realms.map(r => r.name)
+                .sort()
+                .reduce((prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`)}`
+            }}
+            <br />
+            Population: {{ getConnectedRealm(connectedRealmId).population }}
+            <br />
+            Range Min: {{ getRangeStats(id).rangeMin.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g Range
+            Max: {{ getRangeStats(id).rangeMax.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g
+            <br />
+            Current Price
+            {{ getRangeStats(id).currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g ({{
+              getRangeStats(id).currentPriceDescription
+            }}: {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
             <line-chart
               v-if="
                 data.datasets &&
@@ -137,7 +195,15 @@ import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
 import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities, Constants } from '@/utilities';
-import { AuctionTimeSeriesEntry, ConnectedRealm, TimeRangePriceStats, WatchedItem, WatchList, WoWItem } from '@/models';
+import {
+  AuctionTimeSeriesEntry,
+  ConnectedRealm,
+  Realm,
+  TimeRangePriceStats,
+  WatchedItem,
+  WatchList,
+  WoWItem
+} from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
@@ -164,10 +230,19 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   },
 
   data: () => ({
+    addNewItemToWatchList: {
+      loading: false,
+      selectedRealmId: null as number | null,
+      selectedItemId: null as number | null,
+      formValid: false,
+      showDialog: false
+    },
     pageLoading: false,
     pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
-    watchListConnectedRealm: {} as ConnectedRealm,
+    realms: [] as Realm[],
+    realmToConnectedRealmLookup: new Map<number, ConnectedRealm>(),
+    connectedRealmLookup: new Map<number, ConnectedRealm>(),
     rangeStats: new Map<number, TimeRangePriceStats>(),
     chartDatas: undefined as { data: ChartData; watchedItem: WatchedItem }[] | undefined,
     chartOptions: {
@@ -182,6 +257,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             const datasets = data.datasets ?? [];
 
             const curr = datasets[tooltipItem.datasetIndex ?? 0];
+            const amount = ((curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint).y as number;
+            const g = Utilities.convertToGoldSilverCopper(amount * 10000);
+            console.log(g);
             const currMessage = `${curr.label}: ${(
               (curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
             ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
@@ -246,8 +324,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     timeFrame: 'week' as ChartTimeFrame,
     itemsLoading: false,
     items: [] as WoWItem[],
-    itemsSearchTerm: null as string | null,
-    selectedItemId: null as number | null
+    itemsSearchTerm: null as string | null
   }),
 
   methods: {
@@ -498,10 +575,24 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
+    getConnectedRealm(connectedRealmId: number): ConnectedRealm {
+      const realm = this.connectedRealmLookup.get(connectedRealmId);
+
+      if (!realm) {
+        throw new Error(`No realm found for id ${connectedRealmId}.`);
+      }
+
+      return realm;
+    },
+
     getRangeStats(itemId: number): TimeRangePriceStats {
       const stats = this.rangeStats.get(itemId);
 
       return stats ?? { rangeMin: 0, rangeMax: 0, currentPrice: 0, rangePercent: 0, currentPriceDescription: '' };
+    },
+
+    resetAddItemToWatchListForm(): void {
+      (this.$refs.addItemToWatchListForm as any).reset();
     },
 
     async removeItemFromWatchList(watchedItemId: number): Promise<void> {
@@ -525,49 +616,67 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     async addSelectedItemToWatchList(): Promise<void> {
-      if (this.selectedItemId === null || !this.watchList) {
+      const { selectedRealmId, selectedItemId } = this.addNewItemToWatchList;
+
+      if (selectedRealmId === null || selectedItemId === null || !this.watchList) {
         loggerService.error('No selected item!');
         return;
       }
 
-      // try {
-      //   const watchList = await watchListService.addItemToWatchListForUser(this.userId, this.watchList.id, {
-      //     id: this.selectedItemId
-      //   });
+      const connectedRealm = this.realmToConnectedRealmLookup.get(selectedRealmId);
 
-      //   this.watchList = watchList;
+      if (!connectedRealm) {
+        loggerService.error(`No connected realm found for realm id ${selectedRealmId}.`);
+        return;
+      }
 
-      //   const item = watchList.watchedItems.find(i => i.id === this.selectedItemId);
+      try {
+        const watchList = await watchListService.addItemToWatchListForUser(this.userId, this.watchList.id, {
+          wowItemId: selectedItemId,
+          connectedRealmId: connectedRealm.id
+        });
 
-      //   if (!item) {
-      //     loggerService.error(`No item with id ${this.selectedItemId} on watch list.`);
-      //     return;
-      //   }
+        this.watchList = watchList;
 
-      //   const monthAgo = new Date();
-      //   monthAgo.setDate(new Date().getDate() - 30);
+        const item = watchList.watchedItems.find(
+          i => i.wowItemId === selectedItemId && i.connectedRealmId === connectedRealm.id
+        );
 
-      //   this.wowItems.set(item.id, item);
-      //   const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
-      //     {
-      //       wowItemId: item.id,
-      //       connectedRealmId: watchList.connectedRealmId,
-      //       startDate: monthAgo.toISOString().split('T')[0]
-      //     },
-      //     {
-      //       orderBy: 'timestamp',
-      //       comparer: Comparer.dateAscending
-      //     }
-      //   );
+        if (!item) {
+          loggerService.error(
+            `No item with id ${selectedItemId} and connected realm id ${connectedRealm.id} on watch list.`
+          );
+          return;
+        }
 
-      //   this.itemTimeseries.set(item.id, timeseries);
-      //   this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
-      //   ArrayUtilities.orderBy(this.chartDatas ?? [], { orderBy: 'name' });
-      // } catch (error) {
-      //   loggerService.error(error);
-      // } finally {
-      //   this.selectedItemId = null;
-      // }
+        const monthAgo = new Date();
+        monthAgo.setDate(new Date().getDate() - 30);
+
+        this.watchedItems.set(item.id, item);
+        const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
+          {
+            wowItemId: selectedItemId,
+            connectedRealmId: connectedRealm.id,
+            startDate: monthAgo.toISOString().split('T')[0]
+          },
+          {
+            orderBy: 'timestamp',
+            comparer: Comparer.dateAscending
+          }
+        );
+
+        this.itemTimeseries.set(item.id, timeseries);
+        this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
+        ArrayUtilities.orderBy(this.chartDatas ?? [], watchedItem => watchedItem.watchedItem.wowItem.name);
+      } catch (error) {
+        loggerService.error(error);
+      } finally {
+        this.addNewItemToWatchList.loading = false;
+        this.addNewItemToWatchList.showDialog = false;
+        this.addNewItemToWatchList.selectedRealmId = null;
+        this.addNewItemToWatchList.selectedItemId = null;
+        this.resetAddItemToWatchListForm();
+      }
     },
 
     async searchItems(searchTerm: string): Promise<void> {
@@ -642,6 +751,17 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             }
           )
         );
+      }
+
+      const connectedRealms = await realmService.getConnectedRealms();
+
+      for (const connectedRealm of connectedRealms) {
+        this.realms = [...this.realms, ...connectedRealm.realms];
+        this.connectedRealmLookup.set(connectedRealm.id, connectedRealm);
+
+        for (const realm of connectedRealm.realms) {
+          this.realmToConnectedRealmLookup.set(realm.id, connectedRealm);
+        }
       }
 
       for (const [key, value] of timeSeriesPromises.entries()) {

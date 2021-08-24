@@ -90,19 +90,6 @@
                           ></v-text-field>
                         </v-col>
 
-                        <!-- <v-col cols="12" sm="6"> TODO: useful for item level mappings. Delete after that is done.
-                          <v-autocomplete
-                            v-model="createNewWatchList.selectedRealmId"
-                            :items="realms"
-                            item-text="name"
-                            item-value="id"
-                            class="mx-4"
-                            hide-no-data
-                            hide-details
-                            label="Realm"
-                          ></v-autocomplete>
-                        </v-col> -->
-
                         <v-col cols="12">
                           <v-textarea
                             label="Description"
@@ -146,14 +133,6 @@
           <v-card-title>{{ list.name }}</v-card-title>
           <v-card-text>
             {{ list.description }}
-            <!-- <br /> TODO: useful for item level mappings. Delete after that is done.
-            {{
-              `Realm${list.realms.length > 1 ? 's' : ''}: ${list.realms.reduce(
-                (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
-              )}`
-            }}
-            <br />
-            Population: {{ list.population }} -->
           </v-card-text>
           <v-card-actions>
             <v-btn color="accent" @click="goToWatchList(list.id)"><v-icon left> mdi-view-list </v-icon>View</v-btn>
@@ -191,7 +170,7 @@ import {
 } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { loadingService, loggerService, realmService, watchListService } from '@/services';
-import { Utilities } from '@/utilities';
+import { ArrayUtilities, Utilities } from '@/utilities';
 import { Subscription } from 'rxjs';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
@@ -213,7 +192,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
     createNewWatchList: {
       loading: false,
-      selectedRealmId: null as number | null,
       formValid: false,
       showDialog: false,
       watchListToCreate: {} as CreateWatchListForUserRequest
@@ -272,7 +250,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       } catch (error) {
         console.error(error);
       } finally {
-        this.createNewWatchList.selectedRealmId = null;
         this.createNewWatchList.loading = false;
         this.createNewWatchList.showDialog = false;
         this.resetCreateWatchListForm();
@@ -318,7 +295,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         watchLists.splice(watchListIndex, 1, { ...stagedWatchList, ...updatedWatchList });
       } catch (error) {
         // this.errorMessage = `Unable to update budget: ${error.message}`;
-        loggerService.error(`Unable to update budget: ${error.message}`);
+        loggerService.error(`Unable to update watch list: ${error.message}`);
       } finally {
         this.closeEditWatchListDialog();
         this.editWatchList.loading = false;
@@ -372,28 +349,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     }
 
-    this.realms.sort((a, b) => {
-      if (a.name < b.name) {
-        return -1;
-      } else if (a.name > b.name) {
-        return 1;
-      }
-
-      return 0;
-    });
+    ArrayUtilities.orderBy(this.realms, realm => realm.name);
 
     this.watchLists = watchLists;
-
-    // TODO: Useful for item level mappings
-    // .map(wl => ({
-    //   ...wl,
-    //   population: this.connectedRealms.get(wl.connectedRealmId)?.population ?? '',
-    //   realms:
-    //     this.connectedRealms
-    //       .get(wl.connectedRealmId)
-    //       ?.realms.map(r => r.name)
-    //       .sort() ?? []
-    // }));
 
     loadingService.stopLoading();
   },
