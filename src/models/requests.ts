@@ -20,7 +20,6 @@ export interface RegisterUserRequest {
 
 export interface CreateWatchListRequest {
   userId: number;
-  connectedRealmId: number;
   name: string;
   description?: string;
 }
@@ -33,5 +32,6 @@ export interface UpdateWatchListRequest extends Indexable {
 }
 
 export interface AddItemToWatchListRequest {
-  id: number;
+  wowItemId: number;
+  connectedRealmId: number;
 }

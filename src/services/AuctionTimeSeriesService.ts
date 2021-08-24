@@ -52,7 +52,7 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
   ): Promise<AuctionTimeSeriesEntry[]> {
     const nodes = await this.getAllPages<AuctionTimeSeriesEntry, AuctionTimeSeriesQueryParameters>(
       params => this.getAuctionTimeSeriesPage(params),
-      { ...queryParams, first: 250 }
+      { ...queryParams, first: 500 }
     );
 
     if (orderByOptions) {

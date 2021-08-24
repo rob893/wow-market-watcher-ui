@@ -6,7 +6,7 @@
           <v-card-title>{{ watchList.name }}</v-card-title>
           <v-card-text>
             {{ watchList.description }}
-            <br />
+            <!-- <br />
             {{
               `Realm${watchListConnectedRealm.realms.length > 1 ? 's' : ''}: ${watchListConnectedRealm.realms
                 .map(r => r.name)
@@ -14,7 +14,7 @@
                 .reduce((prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`)}`
             }}
             <br />
-            Population: {{ watchListConnectedRealm.population }}
+            Population: {{ watchListConnectedRealm.population }} -->
           </v-card-text>
           <v-card-actions>
             <v-row>
@@ -64,10 +64,21 @@
           </v-card-actions>
         </v-card>
       </v-col>
-      <v-col v-for="{ data, name, id, itemQuality } in chartDatas" :key="id" cols="12">
+      <v-col
+        v-for="{
+          data,
+          watchedItem: {
+            id,
+            wowItemId,
+            wowItem: { quality, name }
+          }
+        } in chartDatas"
+        :key="id"
+        cols="12"
+      >
         <v-card elevation="2">
           <v-card-title>
-            <span :style="{ color: getItemQualityColor(itemQuality, id) }">{{ name }}</span>
+            <span :style="{ color: getItemQualityColor(quality, wowItemId) }">{{ name }}</span>
 
             <v-spacer />
 
@@ -75,7 +86,7 @@
           </v-card-title>
 
           <v-card-subtitle>
-            <a :href="`https://www.wowhead.com/item=${id}`" target="_blank">WoWHead Tooltip</a>
+            <a :href="`https://www.wowhead.com/item=${wowItemId}`" target="_blank">WoWHead Tooltip</a>
           </v-card-subtitle>
 
           <v-card-text>
@@ -126,7 +137,7 @@ import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
 import { Comparer, ChartPluginFactory, ArrayUtilities, ColorUtilities, Utilities, Constants } from '@/utilities';
-import { AuctionTimeSeriesEntry, ConnectedRealm, TimeRangePriceStats, WatchList, WoWItem } from '@/models';
+import { AuctionTimeSeriesEntry, ConnectedRealm, TimeRangePriceStats, WatchedItem, WatchList, WoWItem } from '@/models';
 import { RouteName } from '@/router/RouteName';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
@@ -158,7 +169,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     watchList: undefined as WatchList | undefined,
     watchListConnectedRealm: {} as ConnectedRealm,
     rangeStats: new Map<number, TimeRangePriceStats>(),
-    chartDatas: undefined as { data: ChartData; name: string; id: number; itemQuality: string }[] | undefined,
+    chartDatas: undefined as { data: ChartData; watchedItem: WatchedItem }[] | undefined,
     chartOptions: {
       responsive: true,
       maintainAspectRatio: false,
@@ -230,7 +241,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     } as ChartOptions,
     chartPlugins: [ChartPluginFactory.createVerticalLinePlugin()],
-    wowItems: new Map<number, WoWItem>(),
+    watchedItems: new Map<number, WatchedItem>(),
     itemTimeseries: new Map<number, AuctionTimeSeriesEntry[]>(),
     timeFrame: 'week' as ChartTimeFrame,
     itemsLoading: false,
@@ -289,19 +300,22 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     getChartDatas(
       fromTime: number,
       timeSeriesEntries?: [number, AuctionTimeSeriesEntry[]][]
-    ): { data: ChartData; name: string; id: number; itemQuality: string }[] {
-      const chartDatas: { data: ChartData; name: string; id: number; itemQuality: string }[] = [];
+    ): { data: ChartData; watchedItem: WatchedItem }[] {
+      const chartDatas: { data: ChartData; watchedItem: WatchedItem }[] = [];
       this.rangeStats.clear();
 
       for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
-        const item = this.wowItems.get(key);
+        const item = this.watchedItems.get(key);
+
+        if (!item) {
+          loggerService.error(`Watched item not found in map for id ${key}.`);
+          continue;
+        }
 
         const range = timeSeries.filter(({ timestamp }) => new Date(timestamp).getTime() > fromTime);
 
         const mapped = range.reduce<{
-          name: string;
-          id: number;
-          itemQuality: string;
+          watchedItem: WatchedItem;
           min: { t: string; y: number }[];
           max: { t: string; y: number }[];
           average: { t: string; y: number }[];
@@ -315,14 +329,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           (prev, curr) => {
             const min = curr.minPrice / 10000;
 
-            const stats = this.rangeStats.get(prev.id);
+            const stats = this.rangeStats.get(prev.watchedItem.id);
 
             if (stats) {
               stats.rangeMin = Math.min(stats.rangeMin, min);
               stats.rangeMax = Math.max(stats.rangeMax, min);
               stats.currentPrice = min;
             } else {
-              this.rangeStats.set(prev.id, {
+              this.rangeStats.set(prev.watchedItem.id, {
                 rangeMin: min,
                 rangeMax: min,
                 currentPrice: min,
@@ -332,9 +346,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             }
 
             return {
-              name: prev.name,
-              id: prev.id,
-              itemQuality: prev.itemQuality,
+              watchedItem: prev.watchedItem,
               min: [...prev.min, { t: curr.timestamp, y: min }],
               max: [...prev.max, { t: curr.timestamp, y: curr.maxPrice / 10000 }],
               average: [...prev.average, { t: curr.timestamp, y: curr.averagePrice / 10000 }],
@@ -347,9 +359,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             };
           },
           {
-            name: item?.name ?? 'N/A',
-            id: item?.id ?? NaN,
-            itemQuality: item?.quality ?? 'N/A',
+            watchedItem: item,
             min: [],
             max: [],
             average: [],
@@ -362,7 +372,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           }
         );
 
-        const rangeStats = this.rangeStats.get(mapped.id);
+        const rangeStats = this.rangeStats.get(mapped.watchedItem.id);
 
         if (rangeStats) {
           rangeStats.rangePercent =
@@ -383,12 +393,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         }
 
         chartDatas.push({
-          name: mapped.name,
-          id: mapped.id,
-          itemQuality: mapped.itemQuality,
+          watchedItem: mapped.watchedItem,
           data: {
             datasets:
-              mapped.id === Constants.wowTokenId // Special logic for WoW Token
+              mapped.watchedItem.wowItemId === Constants.wowTokenId // TODO: Special logic for WoW Token. This is bad.
                 ? [
                     {
                       label: 'Price',
@@ -468,7 +476,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         });
       }
 
-      ArrayUtilities.orderBy(chartDatas, { orderBy: 'name' });
+      ArrayUtilities.orderBy(chartDatas, watchedItem => watchedItem.watchedItem.wowItem.name);
 
       return chartDatas;
     },
@@ -496,16 +504,20 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return stats ?? { rangeMin: 0, rangeMax: 0, currentPrice: 0, rangePercent: 0, currentPriceDescription: '' };
     },
 
-    async removeItemFromWatchList(itemId: number): Promise<void> {
+    async removeItemFromWatchList(watchedItemId: number): Promise<void> {
       if (!this.watchList) {
         return;
       }
 
       try {
-        const watchList = await watchListService.deleteItemFromWatchListForUser(this.userId, this.watchList.id, itemId);
+        const watchList = await watchListService.deleteItemFromWatchListForUser(
+          this.userId,
+          this.watchList.id,
+          watchedItemId
+        );
 
-        ArrayUtilities.removeWhere(this.chartDatas ?? [], item => item.id === itemId);
-        this.itemTimeseries.delete(itemId);
+        ArrayUtilities.removeWhere(this.chartDatas ?? [], ({ watchedItem }) => watchedItem.id === watchedItemId);
+        this.itemTimeseries.delete(watchedItemId);
         this.watchList = watchList;
       } catch (error) {
         loggerService.error(error);
@@ -518,44 +530,44 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         return;
       }
 
-      try {
-        const watchList = await watchListService.addItemToWatchListForUser(this.userId, this.watchList.id, {
-          id: this.selectedItemId
-        });
+      // try {
+      //   const watchList = await watchListService.addItemToWatchListForUser(this.userId, this.watchList.id, {
+      //     id: this.selectedItemId
+      //   });
 
-        this.watchList = watchList;
+      //   this.watchList = watchList;
 
-        const item = watchList.watchedItems.find(i => i.id === this.selectedItemId);
+      //   const item = watchList.watchedItems.find(i => i.id === this.selectedItemId);
 
-        if (!item) {
-          loggerService.error(`No item with id ${this.selectedItemId} on watch list.`);
-          return;
-        }
+      //   if (!item) {
+      //     loggerService.error(`No item with id ${this.selectedItemId} on watch list.`);
+      //     return;
+      //   }
 
-        const monthAgo = new Date();
-        monthAgo.setDate(new Date().getDate() - 30);
+      //   const monthAgo = new Date();
+      //   monthAgo.setDate(new Date().getDate() - 30);
 
-        this.wowItems.set(item.id, item);
-        const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
-          {
-            wowItemId: item.id,
-            connectedRealmId: watchList.connectedRealmId,
-            startDate: monthAgo.toISOString().split('T')[0]
-          },
-          {
-            orderBy: 'timestamp',
-            comparer: Comparer.dateAscending
-          }
-        );
+      //   this.wowItems.set(item.id, item);
+      //   const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
+      //     {
+      //       wowItemId: item.id,
+      //       connectedRealmId: watchList.connectedRealmId,
+      //       startDate: monthAgo.toISOString().split('T')[0]
+      //     },
+      //     {
+      //       orderBy: 'timestamp',
+      //       comparer: Comparer.dateAscending
+      //     }
+      //   );
 
-        this.itemTimeseries.set(item.id, timeseries);
-        this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
-        ArrayUtilities.orderBy(this.chartDatas ?? [], { orderBy: 'name' });
-      } catch (error) {
-        loggerService.error(error);
-      } finally {
-        this.selectedItemId = null;
-      }
+      //   this.itemTimeseries.set(item.id, timeseries);
+      //   this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
+      //   ArrayUtilities.orderBy(this.chartDatas ?? [], { orderBy: 'name' });
+      // } catch (error) {
+      //   loggerService.error(error);
+      // } finally {
+      //   this.selectedItemId = null;
+      // }
     },
 
     async searchItems(searchTerm: string): Promise<void> {
@@ -605,32 +617,23 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         return;
       }
 
-      const connectedRealm = await realmService.getConnectedRealm(watchList.connectedRealmId);
-
-      if (!connectedRealm) {
-        loggerService.warn(
-          `No connected realm found for watch list ${watchList.id} using connected realm id of ${watchList.connectedRealmId}.`
-        );
-      } else {
-        this.watchListConnectedRealm = connectedRealm;
-      }
-
       this.watchList = watchList;
-      ArrayUtilities.orderBy(this.watchList.watchedItems, { orderBy: 'name' });
+      ArrayUtilities.orderBy(this.watchList.watchedItems, item => item.wowItem.name);
 
       const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
 
       const monthAgo = new Date();
       monthAgo.setMonth(new Date().getMonth() - 1);
 
-      for (const item of watchList.watchedItems) {
-        this.wowItems.set(item.id, item);
+      for (const watcheditem of watchList.watchedItems) {
+        this.watchedItems.set(watcheditem.id, watcheditem);
+        const { connectedRealmId, id, wowItemId } = watcheditem;
         timeSeriesPromises.set(
-          item.id,
+          id,
           auctionTimeSeriesService.getAuctionTimeSeries(
             {
-              wowItemId: item.id,
-              connectedRealmId: watchList.connectedRealmId,
+              wowItemId,
+              connectedRealmId,
               startDate: monthAgo.toISOString().split('T')[0]
             },
             {

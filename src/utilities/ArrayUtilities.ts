@@ -51,31 +51,65 @@ export class ArrayUtilities {
     });
   }
 
-  public static orderBy<T extends object>(array: T[], orderByOptions: OrderByOptions<T>): T[] {
-    const { orderBy, comparer, direction } = orderByOptions;
+  public static orderBy<T extends object>(array: T[], orderByOptions: OrderByOptions<T>): T[];
+  public static orderBy<T extends object>(
+    array: T[],
+    selector: (item: T) => string | number | boolean,
+    orderByOptions?: Omit<OrderByOptions<T>, 'orderBy' | 'comparer'>
+  ): T[];
+  public static orderBy<T extends object>(
+    array: T[],
+    orderByOptionsOrSelector: OrderByOptions<T> | ((item: T) => string | number | boolean),
+    orderByOptions?: Omit<OrderByOptions<T>, 'orderBy' | 'comparer'>
+  ): T[] {
+    if (typeof orderByOptionsOrSelector === 'function') {
+      const { direction } = orderByOptions ?? {};
 
-    if (comparer) {
-      array.sort((a, b) => comparer(a[orderBy], b[orderBy]));
-    } else {
       array.sort((a, b) => {
         if (direction === 'Descending') {
-          if (a[orderBy] < b[orderBy]) {
+          if (orderByOptionsOrSelector(a) < orderByOptionsOrSelector(b)) {
             return 1;
-          } else if (a[orderBy] > b[orderBy]) {
+          } else if (orderByOptionsOrSelector(a) > orderByOptionsOrSelector(b)) {
             return -1;
           } else {
             return 0;
           }
         }
 
-        if (a[orderBy] > b[orderBy]) {
+        if (orderByOptionsOrSelector(a) > orderByOptionsOrSelector(b)) {
           return 1;
-        } else if (a[orderBy] < b[orderBy]) {
+        } else if (orderByOptionsOrSelector(a) < orderByOptionsOrSelector(b)) {
           return -1;
         } else {
           return 0;
         }
       });
+    } else {
+      const { orderBy, comparer, direction } = orderByOptionsOrSelector;
+
+      if (comparer) {
+        array.sort((a, b) => comparer(a[orderBy], b[orderBy]));
+      } else {
+        array.sort((a, b) => {
+          if (direction === 'Descending') {
+            if (a[orderBy] < b[orderBy]) {
+              return 1;
+            } else if (a[orderBy] > b[orderBy]) {
+              return -1;
+            } else {
+              return 0;
+            }
+          }
+
+          if (a[orderBy] > b[orderBy]) {
+            return 1;
+          } else if (a[orderBy] < b[orderBy]) {
+            return -1;
+          } else {
+            return 0;
+          }
+        });
+      }
     }
 
     return array;

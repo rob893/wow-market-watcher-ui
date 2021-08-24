@@ -44,10 +44,17 @@ export interface WoWItem {
 export interface WatchList {
   id: number;
   userId: number;
-  connectedRealmId: number;
   name: string;
   description?: string;
-  watchedItems: WoWItem[];
+  watchedItems: WatchedItem[];
+}
+
+export interface WatchedItem {
+  id: number;
+  watchListId: number;
+  connectedRealmId: number;
+  wowItemId: number;
+  wowItem: WoWItem;
 }
 
 export interface Realm {

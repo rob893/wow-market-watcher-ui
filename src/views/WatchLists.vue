@@ -90,7 +90,7 @@
                           ></v-text-field>
                         </v-col>
 
-                        <v-col cols="12" sm="6">
+                        <!-- <v-col cols="12" sm="6"> TODO: useful for item level mappings. Delete after that is done.
                           <v-autocomplete
                             v-model="createNewWatchList.selectedRealmId"
                             :items="realms"
@@ -101,7 +101,7 @@
                             hide-details
                             label="Realm"
                           ></v-autocomplete>
-                        </v-col>
+                        </v-col> -->
 
                         <v-col cols="12">
                           <v-textarea
@@ -146,14 +146,14 @@
           <v-card-title>{{ list.name }}</v-card-title>
           <v-card-text>
             {{ list.description }}
-            <br />
+            <!-- <br /> TODO: useful for item level mappings. Delete after that is done.
             {{
               `Realm${list.realms.length > 1 ? 's' : ''}: ${list.realms.reduce(
                 (prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`
               )}`
             }}
             <br />
-            Population: {{ list.population }}
+            Population: {{ list.population }} -->
           </v-card-text>
           <v-card-actions>
             <v-btn color="accent" @click="goToWatchList(list.id)"><v-icon left> mdi-view-list </v-icon>View</v-btn>
@@ -202,7 +202,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   data: () => ({
     pageLoading: false,
     loadingSubscription: new Subscription(),
-    watchLists: [] as (WatchList & { realms: string[]; population: string })[],
+    watchLists: [] as WatchList[],
     showDeleteDialog: false,
     stagedWatchListToDelete: null as WatchList | null,
     realms: [] as Realm[],
@@ -219,7 +219,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       watchListToCreate: {} as CreateWatchListForUserRequest
     },
     editWatchList: {
-      stagedWatchList: null as null | (WatchList & { realms: string[]; population: string }),
+      stagedWatchList: null as null | WatchList,
       watchListToEdit: {
         name: { edited: false, value: '' },
         description: { edited: false, value: '' }
@@ -258,32 +258,17 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     },
 
     async createWatchList(): Promise<void> {
-      const { watchListToCreate, selectedRealmId } = this.createNewWatchList;
+      const { watchListToCreate } = this.createNewWatchList;
 
-      if (Utilities.isEmptyObject(watchListToCreate) || !selectedRealmId) {
+      if (Utilities.isEmptyObject(watchListToCreate)) {
+        loggerService.warn(`watchListToCreate is empty ${watchListToCreate}`);
         return;
       }
-
-      const selectedRealm = this.realmsLookup.get(selectedRealmId);
-
-      if (!selectedRealm) {
-        return;
-      }
-
-      watchListToCreate.connectedRealmId = selectedRealm.connectedRealmId;
 
       try {
         this.createNewWatchList.loading = true;
         const newWatchList = await watchListService.createWatchListForUser(this.userId, watchListToCreate);
-        this.watchLists.push({
-          ...newWatchList,
-          population: this.connectedRealms.get(newWatchList.connectedRealmId)?.population ?? '',
-          realms:
-            this.connectedRealms
-              .get(newWatchList.connectedRealmId)
-              ?.realms.map(r => r.name)
-              .sort() ?? []
-        });
+        this.watchLists.push(newWatchList);
       } catch (error) {
         console.error(error);
       } finally {
@@ -294,7 +279,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
-    stageEditWatchList(watchList: WatchList & { realms: string[]; population: string }): void {
+    stageEditWatchList(watchList: WatchList): void {
       this.editWatchList.watchListIndex = this.watchLists.indexOf(watchList);
 
       Object.keys(this.editWatchList.watchListToEdit).forEach(key => {
@@ -397,15 +382,18 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return 0;
     });
 
-    this.watchLists = watchLists.map(wl => ({
-      ...wl,
-      population: this.connectedRealms.get(wl.connectedRealmId)?.population ?? '',
-      realms:
-        this.connectedRealms
-          .get(wl.connectedRealmId)
-          ?.realms.map(r => r.name)
-          .sort() ?? []
-    }));
+    this.watchLists = watchLists;
+
+    // TODO: Useful for item level mappings
+    // .map(wl => ({
+    //   ...wl,
+    //   population: this.connectedRealms.get(wl.connectedRealmId)?.population ?? '',
+    //   realms:
+    //     this.connectedRealms
+    //       .get(wl.connectedRealmId)
+    //       ?.realms.map(r => r.name)
+    //       .sort() ?? []
+    // }));
 
     loadingService.stopLoading();
   },
