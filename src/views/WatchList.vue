@@ -151,11 +151,12 @@
             <br />
             Population: {{ getConnectedRealm(connectedRealmId).population }}
             <br />
-            Range Min: {{ getRangeStats(id).rangeMin.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g Range
-            Max: {{ getRangeStats(id).rangeMax.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g
+            Range Min:
+            {{ getCurrencyBreakdownString(getRangeStats(id).rangeMin * 10000) }} Range Max:
+            {{ getCurrencyBreakdownString(getRangeStats(id).rangeMax * 10000) }}
             <br />
             Current Price
-            {{ getRangeStats(id).currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }) }}g ({{
+            {{ getCurrencyBreakdownString(getRangeStats(id).currentPrice * 10000) }} ({{
               getRangeStats(id).currentPriceDescription
             }}: {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
             <line-chart
@@ -258,13 +259,13 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
             const curr = datasets[tooltipItem.datasetIndex ?? 0];
             const amount = ((curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint).y as number;
-            const g = Utilities.convertToGoldSilverCopper(amount * 10000);
-            console.log(g);
-            const currMessage = `${curr.label}: ${(
-              (curr.data ?? [])[tooltipItem.index ?? 0] as ChartPoint
-            ).y?.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-            return curr.label === 'Total Available' ? currMessage : `${currMessage}g`;
+            if (curr.label === 'Total Available') {
+              return `${curr.label}: ${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+            }
+
+            const { g, s, c } = Utilities.convertToGoldSilverCopper(amount * 10000);
+            return `${curr.label}: ${g.toLocaleString('en-US', { maximumFractionDigits: 2 })}g ${s}s ${c}c`;
           }
         }
       },
@@ -344,6 +345,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
     getItemQualityColor(quality: string, id: number): WoWItemQualityColor {
       return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet, id);
+    },
+
+    getCurrencyBreakdownString(copper: number): string {
+      const { g, s, c } = Utilities.convertToGoldSilverCopper(copper);
+
+      return `${g.toLocaleString('en-US', { maximumFractionDigits: 2 })}g ${s.toLocaleString('en-US', {
+        maximumFractionDigits: 2
+      })}s ${c.toLocaleString('en-US', { maximumFractionDigits: 2 })}c`;
     },
 
     genFilteredColoredText(

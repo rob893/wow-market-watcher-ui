@@ -30,10 +30,10 @@ export class Utilities {
   }
 
   public static convertToGoldSilverCopper(copper: number): { g: number; s: number; c: number } {
-    const c = copper % 100;
-    const silver = copper / 100;
+    const c = Math.floor(copper) % 100;
+    const silver = Math.floor(copper / 100);
     const s = silver % 100;
-    const g = silver / 100;
+    const g = Math.floor(silver / 100);
 
     return {
       g,
