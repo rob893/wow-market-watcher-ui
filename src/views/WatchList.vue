@@ -1,5 +1,6 @@
 <template>
   <v-container fluid>
+    <alert-designer v-model="createAlertDialog.show" :watchedItem="createAlertDialog.watchedItem"> </alert-designer>
     <v-row v-if="!pageLoading && chartDatas">
       <v-col cols="12">
         <v-card v-if="watchList" elevation="2">
@@ -122,53 +123,46 @@
         </v-card>
       </v-col>
 
-      <v-col
-        v-else
-        v-for="{
-          data,
-          watchedItem: {
-            id,
-            wowItemId,
-            connectedRealmId,
-            wowItem: { quality, name }
-          }
-        } in chartDatas"
-        :key="id"
-        cols="12"
-      >
+      <v-col v-else v-for="{ data, watchedItem } in chartDatas" :key="watchedItem.id" cols="12">
         <v-card elevation="2">
           <v-card-title>
-            <span :style="{ color: getItemQualityColor(quality, wowItemId) }">{{ name }}</span>
+            <span :style="{ color: getItemQualityColor(watchedItem.wowItem.quality, watchedItem.wowItemId) }">{{
+              watchedItem.wowItem.name
+            }}</span>
 
             <v-spacer />
-
-            <v-btn color="error" @click="removeItemFromWatchList(id)"><v-icon left> mdi-delete </v-icon>Remove</v-btn>
+            <v-btn color="success" @click="showCreateAlertDialog(watchedItem)"
+              ><v-icon left> mdi-plus </v-icon>Create Alert</v-btn
+            >
+            <v-btn color="error" @click="removeItemFromWatchList(watchedItem.id)"
+              ><v-icon left> mdi-delete </v-icon>Remove</v-btn
+            >
           </v-card-title>
 
           <v-card-subtitle>
-            <a :href="`https://www.wowhead.com/item=${wowItemId}`" target="_blank">WoWHead Tooltip</a>
+            <a :href="`https://www.wowhead.com/item=${watchedItem.wowItemId}`" target="_blank">WoWHead Tooltip</a>
           </v-card-subtitle>
 
           <v-card-text>
             {{
-              `Realm${getConnectedRealm(connectedRealmId).realms.length > 1 ? 's' : ''}: ${getConnectedRealm(
-                connectedRealmId
-              )
+              `Realm${
+                getConnectedRealm(watchedItem.connectedRealmId).realms.length > 1 ? 's' : ''
+              }: ${getConnectedRealm(watchedItem.connectedRealmId)
                 .realms.map(r => r.name)
                 .sort()
                 .reduce((prev, curr, i) => `${i === 0 ? '' : `${prev}, `}${curr}`)}`
             }}
             <br />
-            Population: {{ getConnectedRealm(connectedRealmId).population }}
+            Population: {{ getConnectedRealm(watchedItem.connectedRealmId).population }}
             <br />
             Range Min:
-            {{ getCurrencyBreakdownString(getRangeStats(id).rangeMin * 10000) }} Range Max:
-            {{ getCurrencyBreakdownString(getRangeStats(id).rangeMax * 10000) }}
+            {{ getCurrencyBreakdownString(getRangeStats(watchedItem.id).rangeMin * 10000) }} Range Max:
+            {{ getCurrencyBreakdownString(getRangeStats(watchedItem.id).rangeMax * 10000) }}
             <br />
             Current Price
-            {{ getCurrencyBreakdownString(getRangeStats(id).currentPrice * 10000) }} ({{
-              getRangeStats(id).currentPriceDescription
-            }}: {{ getRangeStats(id).rangePercent.toFixed(2) }}%)
+            {{ getCurrencyBreakdownString(getRangeStats(watchedItem.id).currentPrice * 10000) }} ({{
+              getRangeStats(watchedItem.id).currentPriceDescription
+            }}: {{ getRangeStats(watchedItem.id).rangePercent.toFixed(2) }}%)
             <line-chart
               v-if="
                 data.datasets &&
@@ -202,6 +196,7 @@ import {
 } from '@/services';
 import colors from 'vuetify/es5/util/colors';
 import LineChart from '@/components/charts/LineChart.vue';
+import AlertDesigner from '@/components/AlertDesigner.vue';
 import Vue, { VueConstructor } from 'vue';
 import { debounce } from 'lodash';
 import { ChartData, ChartOptions, ChartPoint } from 'node_modules/@types/chart.js';
@@ -228,7 +223,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   name: 'WatchList',
 
   components: {
-    LineChart
+    LineChart,
+    AlertDesigner
   },
 
   mixins: [UserMixin],
@@ -249,6 +245,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       showDialog: false
     },
     pageLoading: false,
+    createAlertDialog: {
+      show: false,
+      watchedItem: null as WatchedItem | null
+    },
     pageLoadingSubscription: new Subscription(),
     watchList: undefined as WatchList | undefined,
     realms: [] as Realm[],
@@ -351,6 +351,11 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
           child.setAttribute('style', 'visibility: hidden;');
         }
       }
+    },
+
+    showCreateAlertDialog(watchedItem: WatchedItem): void {
+      this.createAlertDialog.watchedItem = watchedItem;
+      this.createAlertDialog.show = true;
     },
 
     getItemQualityColor(quality: string, id: number): WoWItemQualityColor {
