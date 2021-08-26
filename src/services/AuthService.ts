@@ -4,11 +4,12 @@ import { v4 as uuid } from 'uuid';
 import { Subject } from 'rxjs';
 import { LoginResponse, RefreshTokenResponse, RegisterResponse } from '@/models/responses';
 import { LocalStorageService, localStorageService as localStorageServiceInstance } from './LocalStorageService';
-import { User } from '@/models/entities';
+import { UITheme, User } from '@/models/entities';
 import { WoWMarketWatcherBaseService } from './WoWMarketWatcherBaseService';
 import { HttpClientFactory, Logger, RegisterUserRequest } from '@/models';
 import { loggerService } from './LoggerService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
+import { uiSettingsService, UISettingsService } from './UISettingsService';
 
 export class AuthService extends WoWMarketWatcherBaseService {
   public readonly authChanged: Subject<boolean> = new Subject();
@@ -16,6 +17,8 @@ export class AuthService extends WoWMarketWatcherBaseService {
   public readonly unauthorizedActionAttempted: Subject<number | void> = new Subject();
 
   private readonly localStorageService: LocalStorageService;
+
+  private readonly uiSettingsService: UISettingsService;
 
   private readonly accessTokenStorageKey: string = 'access-token';
 
@@ -37,10 +40,12 @@ export class AuthService extends WoWMarketWatcherBaseService {
     httpClientFactory: HttpClientFactory<AxiosInstance, AxiosRequestConfig>,
     localStorageService: LocalStorageService,
     environmentService: EnvironmentService,
+    uiSettingsService: UISettingsService,
     logger: Logger
   ) {
     super(httpClientFactory, environmentService, logger);
     this.localStorageService = localStorageService;
+    this.uiSettingsService = uiSettingsService;
   }
 
   public get isUserLoggedIn(): boolean {
@@ -246,8 +251,16 @@ export class AuthService extends WoWMarketWatcherBaseService {
     this.localStorageService.setItem(this.refreshTokenStorageKey, refreshToken);
     this.localStorageService.setItem(this.userStorageKey, user);
 
+    this.uiSettingsService.darkThemeSet = user.preferences.uiTheme === UITheme.Dark;
+
     this.authChanged.next(true);
   }
 }
 
-export const authService = new AuthService(axios, localStorageServiceInstance, environmentService, loggerService);
+export const authService = new AuthService(
+  axios,
+  localStorageServiceInstance,
+  environmentService,
+  uiSettingsService,
+  loggerService
+);

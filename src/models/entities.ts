@@ -4,9 +4,21 @@ export interface User {
   firstName?: string;
   lastName?: string;
   email: string;
+  preferences: UserPreferences;
   created: string;
   roles: string[];
   linkedAccounts: LinkedAccount[];
+}
+
+export interface UserPreferences {
+  id: number;
+  userId: number;
+  uiTheme: UITheme;
+}
+
+export enum UITheme {
+  Dark = 'Dark',
+  Light = 'Light'
 }
 
 export interface LinkedAccount {

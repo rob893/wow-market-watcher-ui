@@ -12,10 +12,11 @@ export class UISettingsService {
   }
 
   public get darkThemeSet(): boolean {
-    if (!this.cachedDarkThemeSet) {
+    if (this.cachedDarkThemeSet === null) {
       const savedSetting = this.localStorageService.getItem(this.darkThemeSetKey);
+      console.log(savedSetting);
 
-      if (!savedSetting) {
+      if (typeof savedSetting !== 'string' || savedSetting.length === 0) {
         return true;
       }
 

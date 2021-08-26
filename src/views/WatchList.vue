@@ -17,9 +17,7 @@
                 </v-btn-toggle>
               </v-col>
 
-              <v-spacer />
-
-              <v-col>
+              <v-col class="text-right">
                 <v-dialog v-model="addNewItemToWatchList.showDialog" persistent max-width="600px">
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn color="success" dark v-bind="attrs" v-on="on"
@@ -39,36 +37,39 @@
                       <v-card-text>
                         <v-container>
                           <v-row>
-                            <v-autocomplete
-                              v-model="addNewItemToWatchList.selectedItemId"
-                              :items="items"
-                              :loading="itemsLoading"
-                              :search-input.sync="itemsSearchTerm"
-                              cache-items
-                              item-text="name"
-                              item-value="id"
-                              class="mx-4"
-                              hide-no-data
-                              hide-details
-                              label="Items"
-                              @change="disableWoWHeadLinks"
-                            >
-                              <template v-slot:item="{ parent, item }">
-                                <v-list-item-content>
-                                  <v-list-item-title
-                                    v-html="
-                                      `${genFilteredColoredText(
-                                        item.name,
-                                        getItemQualityColor(item.quality, item.id),
-                                        parent
-                                      )}`
-                                    "
-                                  ></v-list-item-title>
-                                </v-list-item-content>
-                              </template>
-                            </v-autocomplete>
+                            <v-col cols="6">
+                              <v-autocomplete
+                                v-model="addNewItemToWatchList.selectedItemId"
+                                :items="items"
+                                :loading="itemsLoading"
+                                :search-input.sync="itemsSearchTerm"
+                                cache-items
+                                item-text="name"
+                                item-value="id"
+                                class="mx-4"
+                                hide-no-data
+                                hide-details
+                                label="Item*"
+                                :rules="[v => !!v || 'Please select realm.']"
+                                @change="disableWoWHeadLinks"
+                              >
+                                <template v-slot:item="{ parent, item }">
+                                  <v-list-item-content>
+                                    <v-list-item-title
+                                      v-html="
+                                        `${genFilteredColoredText(
+                                          item.name,
+                                          getItemQualityColor(item.quality, item.id),
+                                          parent
+                                        )}`
+                                      "
+                                    ></v-list-item-title>
+                                  </v-list-item-content>
+                                </template>
+                              </v-autocomplete>
+                            </v-col>
 
-                            <v-col cols="12" sm="6">
+                            <v-col cols="6">
                               <v-autocomplete
                                 v-model="addNewItemToWatchList.selectedRealmId"
                                 :items="realms"
@@ -77,7 +78,8 @@
                                 class="mx-4"
                                 hide-no-data
                                 hide-details
-                                label="Realm"
+                                label="Realm*"
+                                :rules="[v => !!v || 'Please select an item.']"
                               ></v-autocomplete>
                             </v-col>
                           </v-row>
@@ -102,7 +104,7 @@
                           Close
                         </v-btn>
                         <v-btn color="blue darken-1" text type="submit" :disabled="!addNewItemToWatchList.formValid">
-                          Create
+                          Add
                         </v-btn>
                       </v-card-actions>
                     </v-form>
@@ -113,7 +115,15 @@
           </v-card-actions>
         </v-card>
       </v-col>
+
+      <v-col v-if="chartDatas.length === 0">
+        <v-card elevation="2">
+          <v-card-text> No items have been added to the watch list. </v-card-text>
+        </v-card>
+      </v-col>
+
       <v-col
+        v-else
         v-for="{
           data,
           watchedItem: {
@@ -388,7 +398,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       timeSeriesEntries?: [number, AuctionTimeSeriesEntry[]][]
     ): { data: ChartData; watchedItem: WatchedItem }[] {
       const chartDatas: { data: ChartData; watchedItem: WatchedItem }[] = [];
-      this.rangeStats.clear();
 
       for (const [key, timeSeries] of timeSeriesEntries ?? this.itemTimeseries.entries()) {
         const item = this.watchedItems.get(key);
@@ -594,8 +603,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return realm;
     },
 
-    getRangeStats(itemId: number): TimeRangePriceStats {
-      const stats = this.rangeStats.get(itemId);
+    getRangeStats(watchedItemId: number): TimeRangePriceStats {
+      const stats = this.rangeStats.get(watchedItemId);
 
       return stats ?? { rangeMin: 0, rangeMax: 0, currentPrice: 0, rangePercent: 0, currentPriceDescription: '' };
     },
