@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import Account from '@/views/Account.vue';
+import Alerts from '@/views/Alerts.vue';
 import Register from '@/views/auth/Register.vue';
 import Login from '@/views/auth/Login.vue';
 import ConfirmEmail from '@/views/auth/ConfirmEmail.vue';
@@ -46,6 +47,11 @@ const router = new VueRouter({
       path: '/account',
       name: RouteName.Account,
       component: Account
+    },
+    {
+      path: '/alerts',
+      name: RouteName.Alerts,
+      component: Alerts
     },
     {
       path: '/watch-lists/:id',

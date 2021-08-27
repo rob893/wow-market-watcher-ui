@@ -29,6 +29,15 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-if="isUserLoggedIn" link to="/alerts">
+          <v-list-item-action>
+            <v-icon>mdi-alert</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Alerts</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-if="isUserLoggedIn" link to="/account">
           <v-list-item-action>
             <v-icon>mdi-account</v-icon>
@@ -69,6 +78,7 @@
         <v-btn v-if="!isUserLoggedIn" link to="/auth/login" text>Login</v-btn>
         <v-btn v-if="!isUserLoggedIn" link to="/auth/register" text>Sign Up</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/watch-lists" text>Watch Lists</v-btn>
+        <v-btn v-if="isUserLoggedIn" link to="/alerts" text>Alerts</v-btn>
         <v-btn v-if="isUserLoggedIn" link to="/account" text>Account</v-btn>
         <v-btn v-if="isUserLoggedIn" @click="logout" text>Logout</v-btn>
       </div>
