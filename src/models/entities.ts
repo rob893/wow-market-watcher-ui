@@ -87,3 +87,77 @@ export interface ConnectedRealm {
   population: string;
   realms: Realm[];
 }
+
+export interface Alert {
+  id: number;
+  userId: number;
+  name: string;
+  description?: string;
+  conditions: AlertCondition[];
+  actions: AlertAction[];
+  state: AlertState;
+  lastEvaluated: string;
+  lastFired?: string;
+}
+
+export interface AlertAction {
+  id: number;
+  alertId: number;
+  actionOn: AlertActionOnType;
+  type: AlertActionType;
+  target: string;
+}
+
+export interface AlertCondition {
+  id: number;
+  alertId: number;
+  wowItemId: number;
+  connectedRealmId: number;
+  metric: AlertConditionMetric;
+  operator: AlertConditionOperator;
+  aggregationType: AlertConditionAggregationType;
+  aggregationTimeGranularityInHours: number;
+  threshold: number;
+}
+
+export enum AlertActionOnType {
+  AlertActivated = 'AlertActivated',
+  AlertDeactivated = 'AlertDeactivated'
+}
+
+export enum AlertActionType {
+  Email = 'Email'
+}
+
+export enum AlertConditionAggregationType {
+  Sum = 'Sum',
+  Count = 'Count',
+  Average = 'Average',
+  Min = 'Min',
+  Max = 'Max'
+}
+
+export enum AlertConditionMetric {
+  TotalAvailableForAuction = 'TotalAvailableForAuction',
+  AveragePrice = 'AveragePrice',
+  MinPrice = 'MinPrice',
+  MaxPrice = 'MaxPrice',
+  Price25Percentile = 'Price25Percentile',
+  Price50Percentile = 'Price50Percentile',
+  Price75Percentile = 'Price75Percentile',
+  Price95Percentile = 'Price95Percentile',
+  Price99Percentile = 'Price99Percentile'
+}
+
+export enum AlertConditionOperator {
+  GreaterThan = 'GreaterThan',
+  GreaterThanOrEqualTo = 'GreaterThanOrEqualTo',
+  LessThan = 'LessThan',
+  LessThanOrEqualTo = 'LessThanOrEqualTo'
+}
+
+export enum AlertState {
+  InsufficientData = 'InsufficientData',
+  Alarm = 'Alarm',
+  Ok = 'Ok'
+}

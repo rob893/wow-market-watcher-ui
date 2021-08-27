@@ -1,4 +1,11 @@
 import { Indexable } from './core';
+import {
+  AlertActionOnType,
+  AlertActionType,
+  AlertConditionAggregationType,
+  AlertConditionMetric,
+  AlertConditionOperator
+} from './entities';
 
 export interface UpdateUserRequest extends Indexable {
   firstName?: string;
@@ -34,4 +41,52 @@ export interface UpdateWatchListRequest extends Indexable {
 export interface AddItemToWatchListRequest {
   wowItemId: number;
   connectedRealmId: number;
+}
+
+export interface CreateAlertActionRequest {
+  actionOn: AlertActionOnType;
+  type: AlertActionType;
+  target: string;
+}
+
+export interface CreateAlertConditionRequest {
+  connectedRealmId: number;
+  wowItemId: number;
+  metric: AlertConditionMetric;
+  operator: AlertConditionOperator;
+  aggregationType: AlertConditionAggregationType;
+  aggregationTimeGranularityInHours: number;
+  threshold: number;
+}
+
+export interface CreateAlertForUserRequest {
+  name: string;
+  description?: string;
+  actions: CreateAlertActionRequest[];
+  conditions: CreateAlertConditionRequest[];
+}
+
+export interface PutAlertActionRequest {
+  type: AlertActionType;
+  target: string;
+}
+
+export interface UpdateAlertActionRequest {
+  type?: AlertActionType;
+  target?: string;
+}
+
+export interface UpdateAlertConditionRequest {
+  connectedRealmId?: number;
+  wowItemId?: number;
+  metric?: AlertConditionMetric;
+  operator?: AlertConditionOperator;
+  aggregationType?: AlertConditionAggregationType;
+  aggregationTimeGranularityInHours?: number;
+  threshold?: number;
+}
+
+export interface UpdateAlertRequest {
+  name?: string;
+  description?: string;
 }
