@@ -1,12 +1,12 @@
 <template>
   <v-container fluid>
-    <alert-designer v-model="createAlertDialog.show"> </alert-designer>
+    <alert-designer v-model="showCreateAlertDialog" :alert="selectedAlert"> </alert-designer>
     <v-row v-if="!pageLoading">
       <v-col cols="12">
         <v-card>
           <v-card-title>My Alerts</v-card-title>
           <v-spacer />
-          <v-btn color="success" @click="createAlertDialog.show = !createAlertDialog.show"
+          <v-btn color="success" @click="showCreateAlertDialog = !showCreateAlertDialog"
             ><v-icon left> mdi-plus </v-icon>Create Alert</v-btn
           >
         </v-card>
@@ -25,7 +25,14 @@
             {{ alert.description }}
           </v-card-text>
           <v-card-actions>
-            <v-btn color="primary"><v-icon left> mdi-pencil </v-icon>Edit</v-btn>
+            <v-btn
+              color="primary"
+              @click="
+                selectedAlert = alert;
+                showCreateAlertDialog = true;
+              "
+              ><v-icon left> mdi-pencil </v-icon>Edit</v-btn
+            >
             <v-btn
               color="error"
               @click="
@@ -68,17 +75,32 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     pageLoading: false,
     loadingSubscription: new Subscription(),
     alerts: [] as Alert[],
+    selectedAlert: null as Alert | null,
     showDeleteDialog: false,
     stagedAlertToDelete: null as Alert | null,
     realms: [] as Realm[],
     realmsLookup: new Map<number, Realm>(),
     connectedRealms: new Map<number, ConnectedRealm>(),
-    createAlertDialog: {
-      show: false
-    }
+    showCreateAlertDialogField: false
   }),
 
   methods: {},
+
+  computed: {
+    showCreateAlertDialog: {
+      get(): boolean {
+        return this.showCreateAlertDialogField;
+      },
+
+      set(value: boolean): void {
+        if (!value) {
+          this.selectedAlert = null;
+        }
+
+        this.showCreateAlertDialogField = value;
+      }
+    }
+  },
 
   async mounted(): Promise<void> {
     this.loadingSubscription = loadingService.loadingStateChanged.subscribe(loading => (this.pageLoading = loading));
