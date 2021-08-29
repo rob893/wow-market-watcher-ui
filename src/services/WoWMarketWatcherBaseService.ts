@@ -68,6 +68,10 @@ export abstract class WoWMarketWatcherBaseService {
     if (!inProgress || allowSimultaneousDuplicates) {
       inProgress = this.httpClient.get<T>(url, config);
       this.inProgressRequestMap.set(key, inProgress);
+    } else {
+      this.logger.debug(
+        `${WoWMarketWatcherBaseService.name}.${this.get.name}: Returning in progess promise for ${key}.`
+      );
     }
 
     try {
@@ -88,6 +92,10 @@ export abstract class WoWMarketWatcherBaseService {
     if (!inProgress || allowSimultaneousDuplicates) {
       inProgress = this.httpClient.delete<T>(url, config);
       this.inProgressRequestMap.set(key, inProgress);
+    } else {
+      this.logger.debug(
+        `${WoWMarketWatcherBaseService.name}.${this.get.name}: Returning in progess promise for ${key}.`
+      );
     }
 
     try {
@@ -109,6 +117,10 @@ export abstract class WoWMarketWatcherBaseService {
     if (!inProgress || allowSimultaneousDuplicates) {
       inProgress = this.httpClient.post<T>(url, data, config);
       this.inProgressRequestMap.set(key, inProgress);
+    } else {
+      this.logger.debug(
+        `${WoWMarketWatcherBaseService.name}.${this.get.name}: Returning in progess promise for ${key}.`
+      );
     }
 
     try {
@@ -130,6 +142,10 @@ export abstract class WoWMarketWatcherBaseService {
     if (!inProgress || allowSimultaneousDuplicates) {
       inProgress = this.httpClient.put<T>(url, data, config);
       this.inProgressRequestMap.set(key, inProgress);
+    } else {
+      this.logger.debug(
+        `${WoWMarketWatcherBaseService.name}.${this.get.name}: Returning in progess promise for ${key}.`
+      );
     }
 
     try {
@@ -151,6 +167,10 @@ export abstract class WoWMarketWatcherBaseService {
     if (!inProgress || allowSimultaneousDuplicates) {
       inProgress = this.httpClient.patch<T>(url, data, config);
       this.inProgressRequestMap.set(key, inProgress);
+    } else {
+      this.logger.debug(
+        `${WoWMarketWatcherBaseService.name}.${this.get.name}: Returning in progess promise for ${key}.`
+      );
     }
 
     try {

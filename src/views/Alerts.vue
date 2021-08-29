@@ -5,10 +5,11 @@
       <v-col cols="12">
         <v-card>
           <v-card-title>My Alerts</v-card-title>
-          <v-spacer />
-          <v-btn color="success" @click="showCreateAlertDialog = !showCreateAlertDialog"
-            ><v-icon left> mdi-plus </v-icon>Create Alert</v-btn
-          >
+          <v-card-actions>
+            <v-btn color="success" @click="showCreateAlertDialog = !showCreateAlertDialog"
+              ><v-icon left> mdi-plus </v-icon>Create Alert</v-btn
+            >
+          </v-card-actions>
         </v-card>
       </v-col>
 
@@ -18,12 +19,34 @@
         </v-card>
       </v-col>
 
-      <v-col v-else v-for="alert in alerts" :key="alert.id" cols="12" lg="6">
-        <v-card>
-          <v-card-title>{{ alert.name }}</v-card-title>
-          <v-card-text>
-            {{ alert.description }}
-          </v-card-text>
+      <v-col v-else v-for="alert in alerts" :key="alert.id" cols="12">
+        <v-card :style="{ border: `1px solid ${getAlertColor(alert)}` }">
+          <v-card-title
+            >{{ alert.name }}
+            <v-spacer />
+            State: {{ alert.state }}
+          </v-card-title>
+          <v-card-subtitle>
+            <v-row>
+              <v-col cols="6" md="9">
+                {{ alert.description }}
+              </v-col>
+              <v-col cols="6" md="3" class="text-right">
+                Last Fired:
+                {{
+                  alert.lastFired
+                    ? new Date(alert.lastFired).toLocaleString('en-US', { timeStyle: 'short', dateStyle: 'short' })
+                    : 'N/A'
+                }}<br />Last Evaluated:
+                {{
+                  alert.lastEvaluated
+                    ? new Date(alert.lastEvaluated).toLocaleString('en-US', { timeStyle: 'short', dateStyle: 'short' })
+                    : 'N/A'
+                }}
+              </v-col>
+            </v-row>
+          </v-card-subtitle>
+          <v-card-text><strong>Conditions</strong> <br />{{ getConditionsString(alert) }}</v-card-text>
           <v-card-actions>
             <v-btn
               color="primary"
@@ -54,11 +77,12 @@
 
 <script lang="ts">
 import Vue, { VueConstructor } from 'vue';
+import colors from 'vuetify/es5/util/colors';
 import AlertDesigner from '@/components/AlertDesigner.vue';
-import { loadingService, realmService } from '@/services';
+import { loadingService, realmService, wowItemService } from '@/services';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
-import { Alert, ConnectedRealm, Realm } from '@/models';
+import { Alert, AlertState, ConnectedRealm, Realm, WoWItem } from '@/models';
 import { alertService } from '@/services/AlertService';
 import { ArrayUtilities } from '@/utilities';
 
@@ -78,13 +102,46 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     selectedAlert: null as Alert | null,
     showDeleteDialog: false,
     stagedAlertToDelete: null as Alert | null,
+    items: new Map<number, WoWItem>(),
     realms: [] as Realm[],
     realmsLookup: new Map<number, Realm>(),
     connectedRealms: new Map<number, ConnectedRealm>(),
     showCreateAlertDialogField: false
   }),
 
-  methods: {},
+  methods: {
+    getAlertColor(alert: Alert): string {
+      switch (alert.state) {
+        case AlertState.InsufficientData:
+          return colors.amber.darken2;
+        case AlertState.Alarm:
+          return colors.red.darken2;
+        case AlertState.Ok:
+          return colors.green.darken2;
+        default:
+          throw new Error(`${alert.state} is an invalid state.`);
+      }
+    },
+
+    getConditionsString(alert: Alert): string {
+      return alert.conditions.reduce((prev, curr, i) => {
+        const item = this.items.get(curr.wowItemId);
+        const realms = this.connectedRealms.get(curr.connectedRealmId)?.realms ?? [];
+
+        return `${prev} ${curr.aggregationType} of ${curr.metric} for ${item?.name} for ${realms.reduce(
+          (prevStr, currRealm, j) =>
+            `${prevStr}${currRealm.name}${
+              j !== realms.length - 1
+                ? `${j === realms.length - 2 ? `${realms.length > 2 ? ', and ' : ' and '}` : ', '}`
+                : ''
+            }`,
+          ''
+        )} is ${curr.operator} ${curr.threshold} over period of ${curr.aggregationTimeGranularityInHours} hour${
+          curr.aggregationTimeGranularityInHours === 1 ? '' : 's'
+        }${i === alert.conditions.length - 1 ? '.' : ' AND when'}`;
+      }, 'When');
+    }
+  },
 
   computed: {
     showCreateAlertDialog: {
@@ -109,6 +166,17 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     const realmsPromise = realmService.getConnectedRealms();
     const alerts = await alertService.getAlertsForUser(this.userId);
     const connectedRealms = await realmsPromise;
+    const items = await Promise.all(
+      [...new Set(alerts.flatMap(alert => alert.conditions).map(condition => condition.wowItemId))].map(itemId =>
+        wowItemService.getItem(itemId)
+      )
+    );
+
+    for (const item of items) {
+      if (item) {
+        this.items.set(item.id, item);
+      }
+    }
 
     for (const connectedRealm of connectedRealms) {
       this.connectedRealms.set(connectedRealm.id, connectedRealm);

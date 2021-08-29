@@ -16,7 +16,7 @@
         <v-list-item>
           <v-list-item-content>
             <v-row>
-              <v-col cols="3">
+              <v-col cols="6" sm="3">
                 <v-text-field label="Name" :rules="nameRules" v-model="alertToModify.name" required></v-text-field>
               </v-col>
             </v-row>
@@ -25,7 +25,7 @@
 
         <v-list-item>
           <v-list-item-content>
-            <v-textarea label="Description" rows="2" v-model="alertToModify.description"></v-textarea>
+            <v-textarea label="Description" rows="3" v-model="alertToModify.description"></v-textarea>
           </v-list-item-content>
         </v-list-item>
       </v-list>

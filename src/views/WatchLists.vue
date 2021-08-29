@@ -295,7 +295,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         watchLists.splice(watchListIndex, 1, { ...stagedWatchList, ...updatedWatchList });
       } catch (error) {
         // this.errorMessage = `Unable to update budget: ${error.message}`;
-        loggerService.error(`Unable to update watch list: ${error.message}`);
+        loggerService.error(`Unable to update watch list: ${(error as any).message}`);
       } finally {
         this.closeEditWatchListDialog();
         this.editWatchList.loading = false;

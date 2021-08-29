@@ -70,9 +70,9 @@
 
       <v-spacer />
 
-      <v-text-field class="mt-5" placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
+      <!-- <v-text-field class="mt-5" placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
 
-      <v-spacer />
+      <v-spacer /> -->
 
       <div class="hidden-sm-and-down">
         <v-btn v-if="!isUserLoggedIn" link to="/auth/login" text>Login</v-btn>
