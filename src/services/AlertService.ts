@@ -153,6 +153,7 @@ export const alertService = new AlertService(
   environmentService,
   new LRUCache({
     maxSize: 100,
+    entryExpirationTimeInMS: 900000,
     clone: true,
     cloneFn: cloneDeep
   }),

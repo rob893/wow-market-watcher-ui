@@ -46,7 +46,7 @@
               </v-col>
             </v-row>
           </v-card-subtitle>
-          <v-card-text><strong>Conditions</strong> <br />{{ getConditionsString(alert) }}</v-card-text>
+          <v-card-text><strong>Conditions</strong> <br /><span v-html="getConditionsString(alert)" /></v-card-text>
           <v-card-actions>
             <v-btn
               color="primary"
@@ -82,9 +82,9 @@ import AlertDesigner from '@/components/AlertDesigner.vue';
 import { loadingService, realmService, wowItemService } from '@/services';
 import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
-import { Alert, AlertState, ConnectedRealm, Realm, WoWItem } from '@/models';
+import { Alert, AlertConditionMetric, AlertState, ConnectedRealm, Realm, WoWItem } from '@/models';
 import { alertService } from '@/services/AlertService';
-import { ArrayUtilities } from '@/utilities';
+import { ArrayUtilities, Utilities } from '@/utilities';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'Alerts',
@@ -127,8 +127,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       return alert.conditions.reduce((prev, curr, i) => {
         const item = this.items.get(curr.wowItemId);
         const realms = this.connectedRealms.get(curr.connectedRealmId)?.realms ?? [];
+        const { g, s, c } = Utilities.convertToGoldSilverCopper(curr.threshold);
 
-        return `${prev} ${curr.aggregationType} of ${curr.metric} for ${item?.name} for ${realms.reduce(
+        return `${prev} ${Utilities.splitAtUpperCase(
+          curr.aggregationType
+        ).toLowerCase()} of ${Utilities.splitAtUpperCase(
+          curr.metric
+        ).toLowerCase()} for <a href="https://www.wowhead.com/item=${item?.id}" target="_blank">${
+          item?.name
+        }</a> for ${realms.reduce(
           (prevStr, currRealm, j) =>
             `${prevStr}${currRealm.name}${
               j !== realms.length - 1
@@ -136,7 +143,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
                 : ''
             }`,
           ''
-        )} is ${curr.operator} ${curr.threshold} over period of ${curr.aggregationTimeGranularityInHours} hour${
+        )} is ${Utilities.splitAtUpperCase(curr.operator).toLowerCase()} ${
+          curr.metric === AlertConditionMetric.TotalAvailableForAuction ? curr.threshold : `${g}g ${s}s ${c}c`
+        } over period of ${curr.aggregationTimeGranularityInHours} hour${
           curr.aggregationTimeGranularityInHours === 1 ? '' : 's'
         }${i === alert.conditions.length - 1 ? '.' : ' AND when'}`;
       }, 'When');

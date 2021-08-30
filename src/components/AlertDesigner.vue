@@ -8,6 +8,7 @@
         <v-toolbar-title>Alert Designer</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-toolbar-items>
+          <v-btn dark text @click="show = false"> Cancel </v-btn>
           <v-btn dark text @click="show = false"> Save </v-btn>
         </v-toolbar-items>
       </v-toolbar>
@@ -29,7 +30,9 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-      <v-divider></v-divider>
+
+      <v-divider />
+
       <v-list three-line subheader>
         <v-subheader>Conditions</v-subheader>
         <v-list-item
@@ -47,12 +50,30 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
+
+      <v-divider />
+
+      <v-list three-line subheader>
+        <v-subheader>Actions</v-subheader>
+        <v-list-item v-for="action in alertToModify.actions" :key="`${action.actionOn}${action.target}${action.type}`">
+          <v-list-item-content>
+            {{ getActionText(action) }}
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
     </v-card>
   </v-dialog>
 </template>
 
 <script lang="ts">
-import { Alert, CreateAlertForUserRequest, WatchedItem } from '@/models';
+import {
+  Alert,
+  AlertAction,
+  AlertActionOnType,
+  CreateAlertActionRequest,
+  CreateAlertForUserRequest,
+  WatchedItem
+} from '@/models';
 import Vue, { PropType } from 'vue';
 import { cloneDeep } from 'lodash';
 
@@ -75,6 +96,14 @@ export default Vue.extend({
     nameRules: [(name: string) => !!name || 'Name is required'],
     alertToModify: {} as CreateAlertForUserRequest
   }),
+
+  methods: {
+    getActionText(action: AlertAction | CreateAlertActionRequest): string {
+      return `When alert ${
+        action.actionOn === AlertActionOnType.AlertActivated ? 'activates' : 'deactivates'
+      }, send ${action.type.toLowerCase()} to ${action.target}.`;
+    }
+  },
 
   watch: {
     alert(): void {
