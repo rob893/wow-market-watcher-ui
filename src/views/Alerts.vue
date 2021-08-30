@@ -24,7 +24,7 @@
           <v-card-title
             >{{ alert.name }}
             <v-spacer />
-            State: {{ alert.state }}
+            State: {{ splitAtUpperCase(alert.state) }}
           </v-card-title>
           <v-card-subtitle>
             <v-row>
@@ -123,6 +123,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     },
 
+    splitAtUpperCase(str: string): string {
+      return Utilities.splitAtUpperCase(str);
+    },
+
     getConditionsString(alert: Alert): string {
       return alert.conditions.reduce((prev, curr, i) => {
         const item = this.items.get(curr.wowItemId);
@@ -144,7 +148,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
             }`,
           ''
         )} is ${Utilities.splitAtUpperCase(curr.operator).toLowerCase()} ${
-          curr.metric === AlertConditionMetric.TotalAvailableForAuction ? curr.threshold : `${g}g ${s}s ${c}c`
+          curr.metric === AlertConditionMetric.TotalAvailableForAuction
+            ? curr.threshold.toLocaleString('en-US')
+            : `${g.toLocaleString('en-US')}g ${s}s ${c}c`
         } over period of ${curr.aggregationTimeGranularityInHours} hour${
           curr.aggregationTimeGranularityInHours === 1 ? '' : 's'
         }${i === alert.conditions.length - 1 ? '.' : ' AND when'}`;
