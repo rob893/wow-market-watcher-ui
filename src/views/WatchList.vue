@@ -1,6 +1,11 @@
 <template>
   <v-container fluid>
-    <alert-designer v-model="createAlertDialog.show" :watchedItem="createAlertDialog.watchedItem"> </alert-designer>
+    <alert-designer
+      v-model="createAlertDialog.show"
+      :connectedRealmId="createAlertDialog.watchedItem ? createAlertDialog.watchedItem.connectedRealmId : undefined"
+      :wowItemId="createAlertDialog.watchedItem ? createAlertDialog.watchedItem.wowItemId : undefined"
+    >
+    </alert-designer>
     <v-row v-if="!pageLoading && chartDatas">
       <v-col cols="12">
         <v-card v-if="watchList" elevation="2">
