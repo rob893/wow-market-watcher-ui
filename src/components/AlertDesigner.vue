@@ -34,16 +34,33 @@
 
         <v-divider />
 
-        <v-list three-line subheader>
-          <v-subheader>Conditions</v-subheader>
-          <v-list-item
-            v-for="condition in alertToModify.conditions"
-            :key="`${condition.wowItemId}${condition.connectedRealmId}`"
-          >
-            <v-list-item-content>
-              <span v-html="getConditionString(condition)" />
-            </v-list-item-content>
-          </v-list-item>
+        <v-list two-line subheader>
+          <v-subheader
+            >Conditions
+            <v-btn icon>
+              <v-icon color="grey lighten-1">mdi-plus</v-icon>
+            </v-btn>
+          </v-subheader>
+
+          <template v-for="(condition, index) in alertToModify.conditions">
+            <v-list-item :key="`${condition.wowItemId}${condition.connectedRealmId}`">
+              <v-list-item-content>
+                <span v-html="getConditionString(condition)" />
+              </v-list-item-content>
+
+              <v-list-item-action>
+                <v-btn icon>
+                  <v-icon color="grey lighten-1">mdi-pencil</v-icon>
+                </v-btn>
+
+                <v-btn icon>
+                  <v-icon color="grey lighten-1">mdi-delete</v-icon>
+                </v-btn>
+              </v-list-item-action>
+            </v-list-item>
+
+            <v-divider v-if="index < alertToModify.conditions.length - 1" :key="index"></v-divider>
+          </template>
         </v-list>
 
         <v-divider />
