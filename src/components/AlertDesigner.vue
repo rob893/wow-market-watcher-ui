@@ -1,6 +1,6 @@
 <template>
   <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="show">
-    <v-card>
+    <v-card v-if="!loading">
       <v-form ref="upsertAlertForm" v-model="formValid" @submit.prevent="saveAlert">
         <v-toolbar dark color="primary">
           <v-btn icon dark @click="closeDialog()">
@@ -42,42 +42,83 @@
             </v-btn>
           </v-subheader>
 
-          <template v-for="(condition, index) in alertToModify.conditions">
-            <v-list-item :key="`${condition.wowItemId}${condition.connectedRealmId}`">
-              <v-list-item-content>
-                <span v-html="getConditionString(condition)" />
-              </v-list-item-content>
+          <div v-if="alertToModify.conditions.length > 0">
+            <template v-for="(condition, index) in alertToModify.conditions">
+              <v-list-item :key="`${condition.wowItemId}${condition.connectedRealmId}`">
+                <v-list-item-content>
+                  <span v-html="getConditionString(condition)" />
+                </v-list-item-content>
 
-              <v-list-item-action>
-                <v-btn icon>
-                  <v-icon color="grey lighten-1">mdi-pencil</v-icon>
-                </v-btn>
+                <v-list-item-action>
+                  <v-row>
+                    <v-btn icon>
+                      <v-icon color="grey lighten-1">mdi-pencil</v-icon>
+                    </v-btn>
 
-                <v-btn icon>
-                  <v-icon color="grey lighten-1">mdi-delete</v-icon>
-                </v-btn>
-              </v-list-item-action>
+                    <v-btn icon>
+                      <v-icon color="grey lighten-1">mdi-delete</v-icon>
+                    </v-btn>
+                  </v-row>
+                </v-list-item-action>
+              </v-list-item>
+
+              <v-divider v-if="index < alertToModify.conditions.length - 1" :key="index"></v-divider>
+            </template>
+          </div>
+
+          <div v-else>
+            <v-list-item>
+              <v-list-item-content> There are no conditions. </v-list-item-content>
             </v-list-item>
-
-            <v-divider v-if="index < alertToModify.conditions.length - 1" :key="index"></v-divider>
-          </template>
+          </div>
         </v-list>
 
         <v-divider />
 
-        <v-list three-line subheader>
-          <v-subheader>Actions</v-subheader>
-          <v-list-item
-            v-for="action in alertToModify.actions"
-            :key="`${action.actionOn}${action.target}${action.type}`"
-          >
-            <v-list-item-content>
-              {{ getActionText(action) }}
-            </v-list-item-content>
-          </v-list-item>
+        <v-list subheader two-line>
+          <v-subheader
+            >Actions
+            <v-btn icon>
+              <v-icon color="grey lighten-1">mdi-plus</v-icon>
+            </v-btn>
+          </v-subheader>
+
+          <div v-if="alertToModify.actions.length > 0">
+            <template v-for="(action, index) in alertToModify.actions">
+              <v-list-item :key="`${action.actionOn}${action.target}${action.type}`">
+                <v-list-item-content>
+                  {{ getActionText(action) }}
+                </v-list-item-content>
+
+                <v-list-item-action>
+                  <v-row>
+                    <v-btn icon>
+                      <v-icon color="grey lighten-1">mdi-pencil</v-icon>
+                    </v-btn>
+
+                    <v-btn icon>
+                      <v-icon color="grey lighten-1">mdi-delete</v-icon>
+                    </v-btn>
+                  </v-row>
+                </v-list-item-action>
+              </v-list-item>
+
+              <v-divider v-if="index < alertToModify.actions.length - 1" :key="index"></v-divider>
+            </template>
+          </div>
+
+          <div v-else>
+            <v-list-item>
+              <v-list-item-content> There are no actions. </v-list-item-content>
+            </v-list-item>
+          </div>
         </v-list>
       </v-form>
     </v-card>
+
+    <div v-else>
+      <v-skeleton-loader v-for="n in 3" :key="n" type="card" v-bind:class="n != 3 ? 'mb-6' : ''" elevation="2" />
+    </div>
   </v-dialog>
 </template>
 
@@ -121,6 +162,7 @@ export default Vue.extend({
 
   data: () => ({
     formValid: false,
+    loading: false,
     nameRules: [(name: string) => !!name || 'Name is required'],
     items: new Map<number, WoWItem>(),
     realms: [] as Realm[],
@@ -181,33 +223,9 @@ export default Vue.extend({
 
     resetUpsertAlertForm(): void {
       (this.$refs.upsertAlertForm as any).reset();
-    }
-  },
+    },
 
-  async mounted(): Promise<void> {
-    const connectedRealms = await realmService.getConnectedRealms();
-
-    for (const connectedRealm of connectedRealms) {
-      this.connectedRealms.set(connectedRealm.id, connectedRealm);
-
-      for (const realm of connectedRealm.realms) {
-        this.realmsLookup.set(realm.id, realm);
-        this.realms.push(realm);
-      }
-    }
-
-    ArrayUtilities.orderBy(this.realms, realm => realm.name);
-  },
-
-  watch: {
-    async alert(): Promise<void> {
-      this.alertToModify = cloneDeep(this.alert) ?? {
-        name: '',
-        description: '',
-        conditions: [],
-        actions: []
-      };
-
+    async loadItems(): Promise<void> {
       if (this.alert) {
         const items = await Promise.all(
           [...new Set(this.alert.conditions.map(condition => condition.wowItemId))].map(itemId =>
@@ -220,6 +238,64 @@ export default Vue.extend({
             this.items.set(item.id, item);
           }
         }
+      }
+    }
+  },
+
+  async mounted(): Promise<void> {
+    this.loading = true;
+
+    try {
+      const connectedRealms = await realmService.getConnectedRealms();
+
+      for (const connectedRealm of connectedRealms) {
+        this.connectedRealms.set(connectedRealm.id, connectedRealm);
+
+        for (const realm of connectedRealm.realms) {
+          this.realmsLookup.set(realm.id, realm);
+          this.realms.push(realm);
+        }
+      }
+
+      ArrayUtilities.orderBy(this.realms, realm => realm.name);
+
+      await this.loadItems();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      this.loading = false;
+    }
+  },
+
+  watch: {
+    async alert(): Promise<void> {
+      this.loading = true;
+
+      try {
+        this.alertToModify = cloneDeep(this.alert) ?? {
+          name: '',
+          description: '',
+          conditions: [],
+          actions: []
+        };
+
+        if (this.alert) {
+          const items = await Promise.all(
+            [...new Set(this.alert.conditions.map(condition => condition.wowItemId))].map(itemId =>
+              wowItemService.getItem(itemId)
+            )
+          );
+
+          for (const item of items) {
+            if (item) {
+              this.items.set(item.id, item);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.loading = false;
       }
     }
   },
