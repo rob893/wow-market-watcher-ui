@@ -1,5 +1,68 @@
 <template>
   <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="show">
+    <v-dialog v-model="addOrUpdateActionDialog.showDialog" persistent max-width="600px">
+      <v-card>
+        <v-form
+          ref="addOrUpdateActionForm"
+          v-model="addOrUpdateActionDialog.formValid"
+          @submit.prevent="addOrUpdateAction"
+        >
+          <v-card-title>
+            <span class="headline">Create New Watch List</span>
+          </v-card-title>
+
+          <v-card-text>
+            <v-container>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    label="Target*"
+                    :rules="addOrUpdateActionDialog.targetRules"
+                    v-model="addOrUpdateActionDialog.newOrUpdatedAction.target"
+                    required
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-select
+                    :items="addOrUpdateActionDialog.actionOnTypes"
+                    label="Action On"
+                    required
+                    v-model="addOrUpdateActionDialog.newOrUpdatedAction.actionOn"
+                  ></v-select>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-select
+                    :items="addOrUpdateActionDialog.actionTypes"
+                    label="Type"
+                    required
+                    v-model="addOrUpdateActionDialog.newOrUpdatedAction.type"
+                  ></v-select>
+                </v-col>
+              </v-row>
+            </v-container>
+            <small>*indicates required field</small>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="blue darken-1"
+              text
+              @click="
+                addOrUpdateActionDialog.showDialog = false;
+                resetAddOrUpdateActionForm();
+              "
+            >
+              Close
+            </v-btn>
+            <v-btn color="blue darken-1" text type="submit" :disabled="!addOrUpdateActionDialog.formValid"> Add </v-btn>
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
     <v-card v-if="!loading">
       <v-form ref="upsertAlertForm" v-model="formValid" @submit.prevent="saveAlert">
         <v-toolbar dark color="primary">
@@ -56,7 +119,7 @@
                     </v-btn>
 
                     <v-btn icon>
-                      <v-icon color="grey lighten-1">mdi-delete</v-icon>
+                      <v-icon color="grey lighten-1" @click="removeCondition(condition)">mdi-delete</v-icon>
                     </v-btn>
                   </v-row>
                 </v-list-item-action>
@@ -79,7 +142,7 @@
           <v-subheader
             >Actions
             <v-btn icon>
-              <v-icon color="grey lighten-1">mdi-plus</v-icon>
+              <v-icon color="grey lighten-1" @click="openAddOrUpdateDialog()">mdi-plus</v-icon>
             </v-btn>
           </v-subheader>
 
@@ -93,11 +156,11 @@
                 <v-list-item-action>
                   <v-row>
                     <v-btn icon>
-                      <v-icon color="grey lighten-1">mdi-pencil</v-icon>
+                      <v-icon color="grey lighten-1" @click="openAddOrUpdateDialog(index)">mdi-pencil</v-icon>
                     </v-btn>
 
                     <v-btn icon>
-                      <v-icon color="grey lighten-1">mdi-delete</v-icon>
+                      <v-icon color="grey lighten-1" @click="removeAction(action)">mdi-delete</v-icon>
                     </v-btn>
                   </v-row>
                 </v-list-item-action>
@@ -127,6 +190,7 @@ import {
   Alert,
   AlertAction,
   AlertActionOnType,
+  AlertActionType,
   AlertCondition,
   AlertConditionMetric,
   ConnectedRealm,
@@ -168,6 +232,21 @@ export default Vue.extend({
     realms: [] as Realm[],
     realmsLookup: new Map<number, Realm>(),
     connectedRealms: new Map<number, ConnectedRealm>(),
+    addOrUpdateActionDialog: {
+      targetRules: [(target: string) => !!target || 'Target is required'],
+      showDialog: false,
+      formValid: false,
+      actionOnTypes: Object.values(AlertActionOnType).map(value => ({
+        text: Utilities.splitAtUpperCase(value),
+        value
+      })),
+      actionTypes: Object.values(AlertActionType).map(value => ({
+        text: Utilities.splitAtUpperCase(value),
+        value
+      })),
+      currentIndex: null as number | null,
+      newOrUpdatedAction: {} as CreateAlertActionRequest
+    },
     alertToModify: {
       name: '',
       description: '',
@@ -181,6 +260,42 @@ export default Vue.extend({
       return `When alert ${
         action.actionOn === AlertActionOnType.AlertActivated ? 'activates' : 'deactivates'
       }, send ${action.type.toLowerCase()} to ${action.target}.`;
+    },
+
+    removeCondition(condition: CreateAlertConditionRequest): void {
+      ArrayUtilities.removeItem(this.alertToModify.conditions, condition);
+    },
+
+    removeAction(action: CreateAlertActionRequest): void {
+      ArrayUtilities.removeItem(this.alertToModify.actions, action);
+    },
+
+    addOrUpdateAction(): void {
+      if (!this.addOrUpdateActionDialog.formValid || !this.addOrUpdateActionDialog.newOrUpdatedAction) {
+        return;
+      }
+
+      if (typeof this.addOrUpdateActionDialog.currentIndex === 'number') {
+        this.alertToModify.actions[this.addOrUpdateActionDialog.currentIndex] =
+          this.addOrUpdateActionDialog.newOrUpdatedAction;
+      } else {
+        this.alertToModify.actions.push(this.addOrUpdateActionDialog.newOrUpdatedAction);
+      }
+    },
+
+    openAddOrUpdateDialog(index?: number): void {
+      if (typeof index === 'number') {
+        this.addOrUpdateActionDialog.currentIndex = index;
+        this.addOrUpdateActionDialog.newOrUpdatedAction = { ...this.alertToModify.actions[index] };
+      } else {
+        this.addOrUpdateActionDialog.newOrUpdatedAction = {
+          type: AlertActionType.Email,
+          actionOn: AlertActionOnType.AlertActivated,
+          target: ''
+        };
+      }
+
+      this.addOrUpdateActionDialog.showDialog = true;
     },
 
     getConditionString(condition: AlertCondition | CreateAlertConditionRequest): string {
@@ -223,6 +338,10 @@ export default Vue.extend({
 
     resetUpsertAlertForm(): void {
       (this.$refs.upsertAlertForm as any).reset();
+    },
+
+    resetAddOrUpdateActionForm(): void {
+      (this.$refs.addOrUpdateActionForm as any).reset();
     },
 
     async loadItems(): Promise<void> {
