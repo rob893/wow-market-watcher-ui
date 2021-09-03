@@ -8,7 +8,9 @@
           @submit.prevent="addOrUpdateAction"
         >
           <v-card-title>
-            <span class="headline">Create New Watch List</span>
+            <span class="headline">
+              {{ typeof addOrUpdateActionDialog.currentIndex === 'number' ? 'Update' : 'Add' }} Alert Action</span
+            >
           </v-card-title>
 
           <v-card-text>
@@ -57,7 +59,9 @@
             >
               Close
             </v-btn>
-            <v-btn color="blue darken-1" text type="submit" :disabled="!addOrUpdateActionDialog.formValid"> Add </v-btn>
+            <v-btn color="blue darken-1" text type="submit" :disabled="!addOrUpdateActionDialog.formValid">
+              {{ typeof addOrUpdateActionDialog.currentIndex === 'number' ? 'Update' : 'Add' }}
+            </v-btn>
           </v-card-actions>
         </v-form>
       </v-card>
@@ -272,15 +276,20 @@ export default Vue.extend({
 
     addOrUpdateAction(): void {
       if (!this.addOrUpdateActionDialog.formValid || !this.addOrUpdateActionDialog.newOrUpdatedAction) {
+        console.error('Add or update action form invalid.');
         return;
       }
 
       if (typeof this.addOrUpdateActionDialog.currentIndex === 'number') {
-        this.alertToModify.actions[this.addOrUpdateActionDialog.currentIndex] =
-          this.addOrUpdateActionDialog.newOrUpdatedAction;
+        this.alertToModify.actions[this.addOrUpdateActionDialog.currentIndex] = {
+          ...this.addOrUpdateActionDialog.newOrUpdatedAction
+        };
       } else {
-        this.alertToModify.actions.push(this.addOrUpdateActionDialog.newOrUpdatedAction);
+        this.alertToModify.actions.push({ ...this.addOrUpdateActionDialog.newOrUpdatedAction });
       }
+
+      this.addOrUpdateActionDialog.showDialog = false;
+      this.resetAddOrUpdateActionForm();
     },
 
     openAddOrUpdateDialog(index?: number): void {

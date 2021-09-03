@@ -1,33 +1,29 @@
 <template>
   <v-footer absolute padless app>
     <v-card flat tile width="100%">
-      <v-row>
-        <v-col cols="4">
-          <v-card-text>
+      <v-card-text>
+        <v-row>
+          <v-col cols="4">
             <h3>About</h3>
             <ul class="footer-list">
               <li><router-link to="/privacy">Privacy</router-link></li>
               <li><router-link to="/faq">FAQ</router-link></li>
             </ul>
-          </v-card-text>
-        </v-col>
+          </v-col>
 
-        <v-col cols="4">
-          <v-card-text>
+          <v-col cols="4">
             <h3>Contact</h3>
             <ul class="footer-list">
               <li><strong>Email:</strong> <a href="mailto:nyi@example.com">nyi@example.com</a></li>
             </ul>
-          </v-card-text>
-        </v-col>
+          </v-col>
 
-        <v-col cols="4">
-          <v-card-text>
+          <v-col cols="4">
             World of Warcraft, Warcraft and Blizzard Entertainment are trademarks or registered trademarks of Blizzard
             Entertainment, Inc. in the U.S. and/or other countries.
-          </v-card-text>
-        </v-col>
-      </v-row>
+          </v-col>
+        </v-row>
+      </v-card-text>
 
       <v-divider></v-divider>
 
