@@ -1,5 +1,63 @@
 <template>
   <v-dialog fullscreen hide-overlay transition="dialog-bottom-transition" v-model="show">
+    <v-dialog v-model="addOrUpdateConditionDialog.showDialog" persistent max-width="600px">
+      <v-card>
+        <v-form
+          ref="addOrUpdateConditionForm"
+          v-model="addOrUpdateConditionDialog.formValid"
+          @submit.prevent="addOrUpdateCondition"
+        >
+          <v-card-title>
+            <span class="headline">
+              {{ typeof addOrUpdateConditionDialog.currentIndex === 'number' ? 'Update' : 'Add' }} Alert Condition</span
+            >
+          </v-card-title>
+
+          <v-card-text>
+            <v-container>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-select
+                    :items="addOrUpdateConditionDialog.metrics"
+                    label="Metric"
+                    required
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.metric"
+                  ></v-select>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-select
+                    :items="addOrUpdateConditionDialog.operators"
+                    label="Operator"
+                    required
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.operator"
+                  ></v-select>
+                </v-col>
+              </v-row>
+            </v-container>
+            <small>*indicates required field</small>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="blue darken-1"
+              text
+              @click="
+                addOrUpdateConditionDialog.showDialog = false;
+                resetAddOrUpdateConditionForm();
+              "
+            >
+              Close
+            </v-btn>
+            <v-btn color="blue darken-1" text type="submit" :disabled="!addOrUpdateConditionDialog.formValid">
+              {{ typeof addOrUpdateConditionDialog.currentIndex === 'number' ? 'Update' : 'Add' }}
+            </v-btn>
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="addOrUpdateActionDialog.showDialog" persistent max-width="600px">
       <v-card>
         <v-form
@@ -105,7 +163,7 @@
           <v-subheader
             >Conditions
             <v-btn icon>
-              <v-icon color="grey lighten-1">mdi-plus</v-icon>
+              <v-icon color="grey lighten-1" @click="openAddOrUpdateConditionDialog()">mdi-plus</v-icon>
             </v-btn>
           </v-subheader>
 
@@ -119,7 +177,7 @@
                 <v-list-item-action>
                   <v-row>
                     <v-btn icon>
-                      <v-icon color="grey lighten-1">mdi-pencil</v-icon>
+                      <v-icon color="grey lighten-1" @click="openAddOrUpdateConditionDialog(index)">mdi-pencil</v-icon>
                     </v-btn>
 
                     <v-btn icon>
@@ -146,7 +204,7 @@
           <v-subheader
             >Actions
             <v-btn icon>
-              <v-icon color="grey lighten-1" @click="openAddOrUpdateDialog()">mdi-plus</v-icon>
+              <v-icon color="grey lighten-1" @click="openAddOrUpdateActionDialog()">mdi-plus</v-icon>
             </v-btn>
           </v-subheader>
 
@@ -160,7 +218,7 @@
                 <v-list-item-action>
                   <v-row>
                     <v-btn icon>
-                      <v-icon color="grey lighten-1" @click="openAddOrUpdateDialog(index)">mdi-pencil</v-icon>
+                      <v-icon color="grey lighten-1" @click="openAddOrUpdateActionDialog(index)">mdi-pencil</v-icon>
                     </v-btn>
 
                     <v-btn icon>
@@ -196,7 +254,9 @@ import {
   AlertActionOnType,
   AlertActionType,
   AlertCondition,
+  AlertConditionAggregationType,
   AlertConditionMetric,
+  AlertConditionOperator,
   ConnectedRealm,
   CreateAlertActionRequest,
   CreateAlertConditionRequest,
@@ -236,8 +296,34 @@ export default Vue.extend({
     realms: [] as Realm[],
     realmsLookup: new Map<number, Realm>(),
     connectedRealms: new Map<number, ConnectedRealm>(),
+    addOrUpdateConditionDialog: {
+      targetRules: [
+        (target: string) => !!target || 'Target is required',
+        (target: string) => Utilities.validateEmail(target) || 'Please enter a valid email'
+      ],
+      thresholdRules: [(threshold: number) => threshold > 0 || 'Threshold must be greater than 0'],
+      showDialog: false,
+      formValid: false,
+      metrics: Object.values(AlertConditionMetric).map(value => ({
+        text: Utilities.splitAtUpperCase(value),
+        value
+      })),
+      operators: Object.values(AlertConditionOperator).map(value => ({
+        text: Utilities.splitAtUpperCase(value),
+        value
+      })),
+      aggregations: Object.values(AlertConditionAggregationType).map(value => ({
+        text: Utilities.splitAtUpperCase(value),
+        value
+      })),
+      currentIndex: null as number | null,
+      newOrUpdatedCondition: {} as CreateAlertConditionRequest
+    },
     addOrUpdateActionDialog: {
-      targetRules: [(target: string) => !!target || 'Target is required'],
+      targetRules: [
+        (target: string) => !!target || 'Target is required',
+        (target: string) => Utilities.validateEmail(target) || 'Please enter a valid email'
+      ],
       showDialog: false,
       formValid: false,
       actionOnTypes: Object.values(AlertActionOnType).map(value => ({
@@ -292,11 +378,16 @@ export default Vue.extend({
       this.resetAddOrUpdateActionForm();
     },
 
-    openAddOrUpdateDialog(index?: number): void {
+    addOrUpdateCondition(): void {
+      console.log('wip');
+    },
+
+    openAddOrUpdateActionDialog(index?: number): void {
       if (typeof index === 'number') {
         this.addOrUpdateActionDialog.currentIndex = index;
         this.addOrUpdateActionDialog.newOrUpdatedAction = { ...this.alertToModify.actions[index] };
       } else {
+        this.addOrUpdateActionDialog.currentIndex = null;
         this.addOrUpdateActionDialog.newOrUpdatedAction = {
           type: AlertActionType.Email,
           actionOn: AlertActionOnType.AlertActivated,
@@ -305,6 +396,26 @@ export default Vue.extend({
       }
 
       this.addOrUpdateActionDialog.showDialog = true;
+    },
+
+    openAddOrUpdateConditionDialog(index?: number): void {
+      if (typeof index === 'number') {
+        this.addOrUpdateConditionDialog.currentIndex = index;
+        this.addOrUpdateConditionDialog.newOrUpdatedCondition = { ...this.alertToModify.conditions[index] };
+      } else {
+        this.addOrUpdateConditionDialog.currentIndex = null;
+        this.addOrUpdateConditionDialog.newOrUpdatedCondition = {
+          wowItemId: 0,
+          connectedRealmId: 0,
+          metric: AlertConditionMetric.MinPrice,
+          operator: AlertConditionOperator.GreaterThan,
+          threshold: 0,
+          aggregationType: AlertConditionAggregationType.Max,
+          aggregationTimeGranularityInHours: 1
+        };
+      }
+
+      this.addOrUpdateConditionDialog.showDialog = true;
     },
 
     getConditionString(condition: AlertCondition | CreateAlertConditionRequest): string {
@@ -350,7 +461,13 @@ export default Vue.extend({
     },
 
     resetAddOrUpdateActionForm(): void {
+      this.addOrUpdateActionDialog.currentIndex = null;
       (this.$refs.addOrUpdateActionForm as any).reset();
+    },
+
+    resetAddOrUpdateConditionForm(): void {
+      this.addOrUpdateConditionDialog.currentIndex = null;
+      (this.$refs.addOrUpdateConditionForm as any).reset();
     },
 
     async loadItems(): Promise<void> {

@@ -109,6 +109,7 @@ import Vue from 'vue';
 import { authService, googleAuthService } from '@/services';
 import { RouteName } from '@/router/RouteName';
 import { LinkedAccountType } from '@/models';
+import { Utilities } from '@/utilities';
 
 export default Vue.extend({
   name: 'Register',
@@ -132,7 +133,10 @@ export default Vue.extend({
           'Password must be between 6 and 256 characters long.'
       ],
       email: null as string | null,
-      emailRules: [(email: string) => !!email || 'Email is required'],
+      emailRules: [
+        (email: string) => !!email || 'Email is required',
+        (email: string) => Utilities.validateEmail(email) || 'Please enter a valid email'
+      ],
       formValid: false
     },
     errorMessage: null as string | null,

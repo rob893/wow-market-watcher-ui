@@ -69,7 +69,7 @@
         </v-toolbar-title>
       </router-link>
 
-      <!-- <v-spacer /> -->
+      <v-spacer />
 
       <!-- <v-text-field class="mt-5" placeholder="Search" prepend-inner-icon="mdi-magnify" filled rounded dense />
 
