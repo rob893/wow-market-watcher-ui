@@ -1,36 +1,41 @@
-export function linq<T>(src: Iterable<T>): Enumerable<T> {
-  return new Enumerable(src);
-}
-
-export class Enumerable<T> implements Iterable<T> {
-  private readonly src: Iterable<T>;
-
-  public constructor(src: Iterable<T>) {
-    this.src = src;
-  }
-
-  public *[Symbol.iterator](): Generator<T> {
-    for (const item of this.src) {
+export function linq<T>(src: IterableIterator<T>): Enumerable<T> {
+  function* generator() {
+    for (const item of src) {
       yield item;
     }
   }
 
+  return new Enumerable(generator);
+}
+
+export class Enumerable<T> implements Iterable<T> {
+  private readonly src: () => IterableIterator<T>;
+
+  public constructor(src: () => IterableIterator<T>) {
+    this.src = src;
+  }
+
+  public [Symbol.iterator](): IterableIterator<T> {
+    return this.src();
+  }
+
   public forEach(callback: (item: T) => void): void {
-    for (const item of this.src) {
+    for (const item of this.src()) {
       callback(item);
     }
   }
 
   public where(exp: (item: T) => boolean): Enumerable<T> {
-    const found: T[] = [];
-
-    for (const item of this.src) {
-      if (exp(item)) {
-        found.push(item);
+    const items = this.src;
+    function* generator() {
+      for (const item of items()) {
+        if (exp(item)) {
+          yield item;
+        }
       }
     }
 
-    return new Enumerable(found);
+    return new Enumerable(generator);
   }
 
   public aggregate<T>(aggregator: (prev: T, curr: T) => T): T;
@@ -56,52 +61,52 @@ export class Enumerable<T> implements Iterable<T> {
 
     let aggregate = seedOrAggregator;
 
-    for (const item of this.src) {
+    for (const item of this.src()) {
       aggregate = aggregator(aggregate, item);
     }
 
     return aggregate;
   }
 
-  public orderBy(selector: (item: T) => string | number | boolean): Enumerable<T> {
-    const sorted = this.toArray().sort((a, b) => {
-      const aComp = selector(a);
-      const bComp = selector(b);
+  // public orderBy(selector: (item: T) => string | number | boolean): Enumerable<T> {
+  //   const sorted = this.toArray().sort((a, b) => {
+  //     const aComp = selector(a);
+  //     const bComp = selector(b);
 
-      if (aComp > bComp) {
-        return 1;
-      } else if (aComp < bComp) {
-        return -1;
-      } else {
-        return 0;
-      }
-    });
+  //     if (aComp > bComp) {
+  //       return 1;
+  //     } else if (aComp < bComp) {
+  //       return -1;
+  //     } else {
+  //       return 0;
+  //     }
+  //   });
 
-    return new Enumerable(sorted);
-  }
+  //   return new Enumerable(sorted);
+  // }
 
-  public orderByDescending(selector: (item: T) => string | number | boolean): Enumerable<T> {
-    const sorted = this.toArray().sort((a, b) => {
-      const aComp = selector(a);
-      const bComp = selector(b);
+  // public orderByDescending(selector: (item: T) => string | number | boolean): Enumerable<T> {
+  //   const sorted = this.toArray().sort((a, b) => {
+  //     const aComp = selector(a);
+  //     const bComp = selector(b);
 
-      if (aComp < bComp) {
-        return 1;
-      } else if (aComp > bComp) {
-        return -1;
-      } else {
-        return 0;
-      }
-    });
+  //     if (aComp < bComp) {
+  //       return 1;
+  //     } else if (aComp > bComp) {
+  //       return -1;
+  //     } else {
+  //       return 0;
+  //     }
+  //   });
 
-    return new Enumerable(sorted);
-  }
+  //   return new Enumerable(sorted);
+  // }
 
   public count(condition?: (item: T) => boolean): number {
     if (condition) {
       let matches = 0;
 
-      for (const item of this.src) {
+      for (const item of this.src()) {
         if (condition(item)) {
           matches++;
         }
@@ -130,7 +135,7 @@ export class Enumerable<T> implements Iterable<T> {
       return this.count() > 0;
     }
 
-    for (const item of this.src) {
+    for (const item of this.src()) {
       if (condition(item)) {
         return true;
       }
@@ -140,7 +145,7 @@ export class Enumerable<T> implements Iterable<T> {
   }
 
   public all(condition: (item: T) => boolean): boolean {
-    for (const item of this.src) {
+    for (const item of this.src()) {
       if (!condition(item)) {
         return false;
       }
@@ -150,23 +155,27 @@ export class Enumerable<T> implements Iterable<T> {
   }
 
   public first(condition?: (item: T) => boolean): T {
-    for (const item of this.src) {
-      if (!condition) {
-        return item;
-      } else if (condition(item)) {
-        return item;
-      }
+    const first = this.firstOrDefault(condition);
+
+    if (first === null) {
+      throw new Error('Sequence contains no elements.');
     }
 
-    throw new Error('Sequence contains no elements.');
+    return first;
   }
 
   public firstOrDefault(condition?: (item: T) => boolean): T | null {
-    for (const item of this.src) {
-      if (!condition) {
-        return item;
-      } else if (condition(item)) {
-        return item;
+    if (condition) {
+      for (const item of this.src()) {
+        if (condition(item)) {
+          return item;
+        }
+      }
+    } else {
+      const next = this.src().next();
+
+      if (next.done) {
+        return next.value;
       }
     }
 
@@ -189,44 +198,50 @@ export class Enumerable<T> implements Iterable<T> {
     return this.sum(selector) / this.count();
   }
 
-  public quantile(selector: (item: T) => number, q: number): number {
-    const sorted = this.select(selector)
-      .orderBy(x => x)
-      .toArray();
-    const pos = (sorted.length - 1) * q;
-    const base = Math.floor(pos);
-    const rest = pos - base;
-    if (sorted[base + 1] !== undefined) {
-      return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
-    } else {
-      return sorted[base];
-    }
-  }
+  // public quantile(selector: (item: T) => number, q: number): number {
+  //   const sorted = this.select(selector)
+  //     .orderBy(x => x)
+  //     .toArray();
+  //   const pos = (sorted.length - 1) * q;
+  //   const base = Math.floor(pos);
+  //   const rest = pos - base;
+  //   if (sorted[base + 1] !== undefined) {
+  //     return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  //   } else {
+  //     return sorted[base];
+  //   }
+  // }
 
   public select<TDestination>(exp: (item: T) => TDestination): Enumerable<TDestination> {
-    const mapped: TDestination[] = [];
+    const src = this.src;
 
-    for (const item of this.src) {
-      mapped.push(exp(item));
+    function* generator() {
+      for (const item of src()) {
+        yield exp(item);
+      }
     }
 
-    return new Enumerable(mapped);
+    return new Enumerable(generator);
   }
 
   public selectMany<TDestination extends []>(exp: (item: T) => TDestination[]): Enumerable<TDestination> {
-    const mapped: TDestination[] = [];
+    const src = this.src;
 
-    for (const item of this.src) {
-      mapped.push(...exp(item));
+    function* generator() {
+      for (const item of src()) {
+        for (const i of exp(item)) {
+          yield i;
+        }
+      }
     }
 
-    return new Enumerable(mapped);
+    return new Enumerable(generator);
   }
 
   public toMap<TKey>(keySelector: (item: T) => TKey): Map<TKey, T> {
     const map = new Map<TKey, T>();
 
-    for (const item of this.src) {
+    for (const item of this.src()) {
       const key = keySelector(item);
       map.set(key, item);
     }
@@ -235,51 +250,61 @@ export class Enumerable<T> implements Iterable<T> {
   }
 
   public toSet(): Set<T> {
-    return new Set(this.src);
+    return new Set(this.src());
   }
 
   public toArray(): T[] {
-    return [...this.src];
+    return [...this.src()];
   }
 
-  public shuffle(): Enumerable<T> {
-    const array = [...this.src];
-    let currentIndex = array.length,
-      temporaryValue,
-      randomIndex;
+  // public shuffle(): Enumerable<T> {
+  //   const array = [...this.src];
+  //   let currentIndex = array.length,
+  //     temporaryValue,
+  //     randomIndex;
 
-    // While there remain elements to shuffle...
-    while (0 !== currentIndex) {
-      // Pick a remaining element...
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex -= 1;
+  //   // While there remain elements to shuffle...
+  //   while (0 !== currentIndex) {
+  //     // Pick a remaining element...
+  //     randomIndex = Math.floor(Math.random() * currentIndex);
+  //     currentIndex -= 1;
 
-      // And swap it with the current element.
-      temporaryValue = array[currentIndex];
-      array[currentIndex] = array[randomIndex];
-      array[randomIndex] = temporaryValue;
-    }
+  //     // And swap it with the current element.
+  //     temporaryValue = array[currentIndex];
+  //     array[currentIndex] = array[randomIndex];
+  //     array[randomIndex] = temporaryValue;
+  //   }
 
-    return new Enumerable(array);
-  }
+  //   return new Enumerable(array);
+  // }
 
   public distinct<TKey>(selector?: (item: T) => TKey): Enumerable<T> {
-    if (!selector) {
-      return new Enumerable(new Set(this.src));
-    }
+    const src = this.src;
 
-    const seenKeys = new Set<TKey>();
-    const distictItems: T[] = [];
+    function* generator() {
+      if (!selector) {
+        const seenItems = new Set<T>();
 
-    for (const item of this.src) {
-      const key = selector(item);
+        for (const item of src()) {
+          if (!seenItems.has(item)) {
+            seenItems.add(item);
+            yield item;
+          }
+        }
+      } else {
+        const seenKeys = new Set<TKey>();
 
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        distictItems.push(item);
+        for (const item of src()) {
+          const key = selector(item);
+
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            yield item;
+          }
+        }
       }
     }
 
-    return new Enumerable(distictItems);
+    return new Enumerable(generator);
   }
 }
