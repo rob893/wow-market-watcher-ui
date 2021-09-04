@@ -4,3 +4,4 @@ export * from './ArrayUtilities';
 export * from './ColorUtilities';
 export * from './ChartPluginFactory';
 export * from './Constants';
+export * from './linq';

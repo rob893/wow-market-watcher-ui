@@ -17,6 +17,56 @@
             <v-container>
               <v-row>
                 <v-col cols="12" sm="6">
+                  <v-autocomplete
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.wowItem"
+                    :items="items"
+                    :loading="itemsLoading"
+                    :search-input.sync="itemsSearchTerm"
+                    cache-items
+                    item-text="name"
+                    item-value="id"
+                    class="mx-4"
+                    hide-no-data
+                    hide-details
+                    label="Item*"
+                    requried
+                    :rules="[v => !!v || 'Please select an item.']"
+                  >
+                    <template v-slot:item="{ parent, item }">
+                      <v-list-item-content>
+                        <v-list-item-title
+                          v-html="
+                            `${genFilteredColoredText(item.name, getItemQualityColor(item.quality, item.id), parent)}`
+                          "
+                        ></v-list-item-title>
+                      </v-list-item-content>
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-autocomplete
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.realm"
+                    :items="realms"
+                    item-text="name"
+                    item-value="id"
+                    class="mx-4"
+                    hide-no-data
+                    hide-details
+                    label="Realm*"
+                    :rules="[v => !!v || 'Please select an item.']"
+                  ></v-autocomplete>
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <v-select
+                    :items="addOrUpdateConditionDialog.aggregations"
+                    label="Aggregation"
+                    required
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.aggregationType"
+                  ></v-select>
+                </v-col>
+
+                <v-col cols="12" sm="6">
                   <v-select
                     :items="addOrUpdateConditionDialog.metrics"
                     label="Metric"
@@ -32,6 +82,16 @@
                     required
                     v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.operator"
                   ></v-select>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    type="number"
+                    :rules="addOrUpdateConditionDialog.thresholdRules"
+                    label="Threshold"
+                    required
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.threshold"
+                  ></v-text-field>
                 </v-col>
               </v-row>
             </v-container>
@@ -265,9 +325,10 @@ import {
   WoWItem
 } from '@/models';
 import Vue, { PropType } from 'vue';
-import { cloneDeep } from 'lodash';
-import { ArrayUtilities, Utilities } from '@/utilities';
-import { realmService, wowItemService } from '@/services';
+import { cloneDeep, debounce } from 'lodash';
+import { ArrayUtilities, ColorUtilities, linq, Utilities } from '@/utilities';
+import { realmService, uiSettingsService, wowItemService } from '@/services';
+import { WoWItemQualityColor } from '@/models/blizzard';
 
 export default Vue.extend({
   name: 'AlertDesigner',
@@ -292,7 +353,10 @@ export default Vue.extend({
     formValid: false,
     loading: false,
     nameRules: [(name: string) => !!name || 'Name is required'],
-    items: new Map<number, WoWItem>(),
+    itemsLookup: new Map<number, WoWItem>(),
+    itemsLoading: false,
+    items: [] as WoWItem[],
+    itemsSearchTerm: null as string | null,
     realms: [] as Realm[],
     realmsLookup: new Map<number, Realm>(),
     connectedRealms: new Map<number, ConnectedRealm>(),
@@ -317,7 +381,7 @@ export default Vue.extend({
         value
       })),
       currentIndex: null as number | null,
-      newOrUpdatedCondition: {} as CreateAlertConditionRequest
+      newOrUpdatedCondition: {} as CreateAlertConditionRequest & { wowItem?: WoWItem | null; realm?: Realm | null }
     },
     addOrUpdateActionDialog: {
       targetRules: [
@@ -378,8 +442,42 @@ export default Vue.extend({
       this.resetAddOrUpdateActionForm();
     },
 
+    getItemQualityColor(quality: string, id: number): WoWItemQualityColor {
+      return ColorUtilities.getItemQualityColor(quality, uiSettingsService.darkThemeSet, id);
+    },
+
+    genFilteredColoredText(
+      text: string,
+      textColor: string,
+      parent?: { genFilteredText(text: string): string }
+    ): string {
+      let result = parent?.genFilteredText(text) ?? '';
+      const search = '<span';
+      const spanIndex = result.indexOf(search);
+
+      if (spanIndex >= 0) {
+        result = Utilities.insert(result, spanIndex + search.length, ` style="color: ${textColor}"`);
+      }
+
+      return `<span style="color: ${textColor}">${result}</span>`;
+    },
+
     addOrUpdateCondition(): void {
-      console.log('wip');
+      if (!this.addOrUpdateConditionDialog.formValid || !this.addOrUpdateConditionDialog.newOrUpdatedCondition) {
+        console.error('Add or update condition form invalid.');
+        return;
+      }
+
+      if (typeof this.addOrUpdateConditionDialog.currentIndex === 'number') {
+        this.alertToModify.conditions[this.addOrUpdateConditionDialog.currentIndex] = {
+          ...this.addOrUpdateConditionDialog.newOrUpdatedCondition
+        };
+      } else {
+        this.alertToModify.conditions.push({ ...this.addOrUpdateConditionDialog.newOrUpdatedCondition });
+      }
+
+      this.addOrUpdateConditionDialog.showDialog = false;
+      this.resetAddOrUpdateConditionForm();
     },
 
     openAddOrUpdateActionDialog(index?: number): void {
@@ -405,11 +503,15 @@ export default Vue.extend({
       } else {
         this.addOrUpdateConditionDialog.currentIndex = null;
         this.addOrUpdateConditionDialog.newOrUpdatedCondition = {
-          wowItemId: 0,
-          connectedRealmId: 0,
+          wowItem: this.wowItemId ? this.items.find(item => item.id === this.wowItemId) : null, // can't use lookup due to needing item from autocomplete box
+          wowItemId: this.wowItemId ?? 0,
+          connectedRealmId: this.connectedRealmId ?? 0,
+          realm: this.connectedRealmId
+            ? this.realms.find(realm => realm.connectedRealmId === this.connectedRealmId)
+            : null, // can't use lookup due to needing item from autocomplete box
           metric: AlertConditionMetric.MinPrice,
           operator: AlertConditionOperator.GreaterThan,
-          threshold: 0,
+          threshold: 10000,
           aggregationType: AlertConditionAggregationType.Max,
           aggregationTimeGranularityInHours: 1
         };
@@ -419,7 +521,7 @@ export default Vue.extend({
     },
 
     getConditionString(condition: AlertCondition | CreateAlertConditionRequest): string {
-      const item = this.items.get(condition.wowItemId);
+      const item = this.itemsLookup.get(condition.wowItemId);
       const realms = this.connectedRealms.get(condition.connectedRealmId)?.realms ?? [];
       const { g, s, c } = Utilities.convertToGoldSilverCopper(condition.threshold);
 
@@ -473,18 +575,57 @@ export default Vue.extend({
     async loadItems(): Promise<void> {
       if (this.alert) {
         const items = await Promise.all(
-          [...new Set(this.alert.conditions.map(condition => condition.wowItemId))].map(itemId =>
-            wowItemService.getItem(itemId)
-          )
+          [
+            ...new Set(
+              typeof this.wowItemId === 'number'
+                ? [...this.alert.conditions.map(condition => condition.wowItemId), this.wowItemId]
+                : this.alert.conditions.map(condition => condition.wowItemId)
+            )
+          ].map(itemId => wowItemService.getItem(itemId))
         );
 
         for (const item of items) {
           if (item) {
-            this.items.set(item.id, item);
+            this.itemsLookup.set(item.id, item);
           }
         }
+      } else if (typeof this.wowItemId === 'number') {
+        const item = await wowItemService.getItem(this.wowItemId);
+
+        if (item) {
+          this.itemsLookup.set(this.wowItemId, item);
+        }
       }
-    }
+    },
+
+    async searchItems(searchTerm: string): Promise<void> {
+      this.itemsLoading = true;
+
+      try {
+        const newItems = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
+
+        this.items = linq([...this.items, ...newItems])
+          .distinct(item => item.id)
+          .toArray();
+
+        for (const item of this.items) {
+          this.itemsLookup.set(item.id, item);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.itemsLoading = false;
+      }
+    },
+
+    // Must use 'function' syntax for correct 'this' binding
+    debouncedSearchItems: debounce(function (
+      this: Vue & { searchItems(searchTerm: string): Promise<void> },
+      newValue: string
+    ): void {
+      this.searchItems(newValue);
+    },
+    500)
   },
 
   async mounted(): Promise<void> {
@@ -513,6 +654,15 @@ export default Vue.extend({
   },
 
   watch: {
+    async wowItemId(): Promise<void> {
+      const item = await wowItemService.getItem(this.wowItemId);
+
+      if (item) {
+        this.items.push(item);
+        this.itemsLookup.set(item.id, item);
+      }
+    },
+
     async alert(): Promise<void> {
       this.loading = true;
 
@@ -533,7 +683,7 @@ export default Vue.extend({
 
           for (const item of items) {
             if (item) {
-              this.items.set(item.id, item);
+              this.itemsLookup.set(item.id, item);
             }
           }
         }
@@ -542,6 +692,14 @@ export default Vue.extend({
       } finally {
         this.loading = false;
       }
+    },
+
+    itemsSearchTerm(newValue: string | null): void {
+      if (!newValue) {
+        return;
+      }
+
+      this.debouncedSearchItems(newValue);
     }
   },
 
