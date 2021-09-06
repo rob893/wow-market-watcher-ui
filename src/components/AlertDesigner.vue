@@ -326,7 +326,8 @@ import {
 } from '@/models';
 import Vue, { PropType } from 'vue';
 import { cloneDeep, debounce } from 'lodash';
-import { ArrayUtilities, ColorUtilities, linq, Utilities } from '@/utilities';
+import { from } from 'typescript-extended-linq';
+import { ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
 import { realmService, uiSettingsService, wowItemService } from '@/services';
 import { WoWItemQualityColor } from '@/models/blizzard';
 
@@ -604,7 +605,7 @@ export default Vue.extend({
       try {
         const newItems = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
 
-        this.items = linq([...this.items, ...newItems])
+        this.items = from([...this.items, ...newItems])
           .distinct(item => item.id)
           .toArray();
 

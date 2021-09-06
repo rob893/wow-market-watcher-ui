@@ -159,18 +159,10 @@
 <script lang="ts">
 import Vue, { VueConstructor } from 'vue';
 import { UserMixin } from '@/mixins/UserMixin';
-import {
-  ConnectedRealm,
-  CreateWatchListForUserRequest,
-  EditFormField,
-  Indexable,
-  Realm,
-  UpdateWatchListRequest,
-  WatchList
-} from '@/models';
+import { CreateWatchListForUserRequest, EditFormField, Indexable, UpdateWatchListRequest, WatchList } from '@/models';
 import { RouteName } from '@/router/RouteName';
-import { loadingService, loggerService, realmService, watchListService } from '@/services';
-import { ArrayUtilities, Utilities } from '@/utilities';
+import { loadingService, loggerService, watchListService } from '@/services';
+import { Utilities } from '@/utilities';
 import { Subscription } from 'rxjs';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
@@ -184,9 +176,6 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     watchLists: [] as WatchList[],
     showDeleteDialog: false,
     stagedWatchListToDelete: null as WatchList | null,
-    realms: [] as Realm[],
-    realmsLookup: new Map<number, Realm>(),
-    connectedRealms: new Map<number, ConnectedRealm>(),
     watchListCommon: {
       nameRules: [(name: string) => !!name || 'Name is required']
     },
@@ -336,20 +325,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     this.loadingSubscription = loadingService.loadingStateChanged.subscribe(loading => (this.pageLoading = loading));
     loadingService.startLoading();
 
-    const realmsPromise = realmService.getConnectedRealms();
     const watchLists = await watchListService.getWatchListsForUser(this.userId);
-    const connectedRealms = await realmsPromise;
-
-    for (const connectedRealm of connectedRealms) {
-      this.connectedRealms.set(connectedRealm.id, connectedRealm);
-
-      for (const realm of connectedRealm.realms) {
-        this.realmsLookup.set(realm.id, realm);
-        this.realms.push(realm);
-      }
-    }
-
-    ArrayUtilities.orderBy(this.realms, realm => realm.name);
 
     this.watchLists = watchLists;
 

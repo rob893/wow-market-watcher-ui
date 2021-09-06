@@ -221,6 +221,7 @@ import { Subscription } from 'rxjs';
 import { WoWItemQualityColor } from '@/models/blizzard';
 import { uiSettingsService } from '@/services';
 import { MathUtilities } from '@/utilities/MathUtilities';
+import { from } from 'typescript-extended-linq';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -581,9 +582,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         });
       }
 
-      ArrayUtilities.orderBy(chartDatas, watchedItem => watchedItem.watchedItem.wowItem.name);
-
-      return chartDatas;
+      return from(chartDatas)
+        .orderBy(watchedItem => watchedItem.watchedItem.wowItem.name)
+        .toArray();
     },
 
     getTimeAgo(timeFrame: ChartTimeFrame): number {
@@ -695,7 +696,10 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
         this.itemTimeseries.set(item.id, timeseries);
         this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
-        ArrayUtilities.orderBy(this.chartDatas ?? [], watchedItem => watchedItem.watchedItem.wowItem.name);
+        this.chartDatas = from(this.chartDatas ?? [])
+          .orderBy(watchedItem => watchedItem.watchedItem.wowItem.name)
+          .toArray();
+        // ArrayUtilities.orderBy(this.chartDatas ?? [], watchedItem => watchedItem.watchedItem.wowItem.name);
       } catch (error) {
         loggerService.error(error);
       } finally {
@@ -755,7 +759,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
 
       this.watchList = watchList;
-      ArrayUtilities.orderBy(this.watchList.watchedItems, item => item.wowItem.name);
+      this.watchList.watchedItems = from(this.watchList.watchedItems)
+        .orderBy(item => item.wowItem.name)
+        .toArray();
 
       const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
 
@@ -783,10 +789,14 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
       const connectedRealms = await realmService.getConnectedRealms();
 
-      for (const connectedRealm of connectedRealms) {
-        this.realms = [...this.realms, ...connectedRealm.realms];
-        this.connectedRealmLookup.set(connectedRealm.id, connectedRealm);
+      this.realms = from(connectedRealms)
+        .selectMany(connectedRealm => connectedRealm.realms)
+        .orderBy(realm => realm.name)
+        .toArray();
 
+      this.connectedRealmLookup = from(connectedRealms).toMap(connectedRealm => connectedRealm.id);
+
+      for (const connectedRealm of connectedRealms) {
         for (const realm of connectedRealm.realms) {
           this.realmToConnectedRealmLookup.set(realm.id, connectedRealm);
         }
