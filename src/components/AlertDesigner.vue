@@ -606,7 +606,7 @@ export default Vue.extend({
         const newItems = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
 
         this.items = from([...this.items, ...newItems])
-          .distinct(item => item.id)
+          .distinctBy(item => item.id)
           .toArray();
 
         for (const item of this.items) {
