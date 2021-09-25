@@ -1,14 +1,14 @@
 import querystring from 'query-string';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { LRUCache } from 'typescript-lru-cache';
-import { CursorPaginatedResponse, HttpClientFactory, Logger, OrderByOptions, WoWItem } from '@/models';
+import { CursorPaginatedResponse, HttpClientFactory, Logger, WoWItem } from '@/models';
 import { authService, AuthService } from './AuthService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
 import { WoWItemQueryParameters } from '@/models/queryParameters';
-import { ArrayUtilities } from '@/utilities';
 import { cloneDeep } from 'lodash';
+import { List } from 'typescript-extended-linq';
 
 export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, WoWItem | WoWItem[]>;
@@ -24,10 +24,7 @@ export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
     this.cache = cache;
   }
 
-  public async getItems(
-    queryParams: WoWItemQueryParameters,
-    orderByOptions?: OrderByOptions<WoWItem>
-  ): Promise<WoWItem[]> {
+  public async getItems(queryParams: WoWItemQueryParameters): Promise<List<WoWItem>> {
     queryParams.includeEdges = false;
     const query = querystring.stringify(queryParams);
     const url = `wow/items?${query}`;
@@ -35,11 +32,7 @@ export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
     const cachedEntry = this.cache.get(url);
 
     if (cachedEntry && Array.isArray(cachedEntry)) {
-      if (orderByOptions) {
-        ArrayUtilities.orderBy(cachedEntry, orderByOptions);
-      }
-
-      return cachedEntry;
+      return new List(cachedEntry);
     }
 
     const {
@@ -48,11 +41,7 @@ export class WoWItemService extends WoWMarketWatcherAuthenticatedBaseService {
 
     this.cache.set(url, nodes);
 
-    if (orderByOptions) {
-      ArrayUtilities.orderBy(nodes, orderByOptions);
-    }
-
-    return nodes;
+    return new List(nodes);
   }
 
   public async getItem(itemId: number): Promise<WoWItem | null> {

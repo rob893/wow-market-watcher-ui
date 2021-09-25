@@ -4,6 +4,7 @@ import { EnvironmentService } from './EnvironmentService';
 import { HttpInterceptors } from '@/utilities/HttpInterceptors';
 import { HttpMethod } from '@/models';
 import { CursorPaginationParameters } from '@/models/queryParameters';
+import { List } from 'typescript-extended-linq';
 
 export abstract class WoWMarketWatcherBaseService {
   protected readonly logger: Logger;
@@ -35,7 +36,7 @@ export abstract class WoWMarketWatcherBaseService {
   protected async getAllPages<T = unknown, TParams extends CursorPaginationParameters = CursorPaginationParameters>(
     getPage: (queryParams: TParams) => Promise<CursorPaginatedResponse<T>>,
     queryParams: Omit<TParams, 'after' | 'before' | 'last' | 'includeEdges'>
-  ): Promise<T[]> {
+  ): Promise<List<T>> {
     const params = { ...queryParams } as TParams;
     params.first ??= 100;
     params.includeEdges = false;
@@ -54,7 +55,7 @@ export abstract class WoWMarketWatcherBaseService {
       results = [...results, ...nextNodes];
     }
 
-    return results;
+    return new List(results);
   }
 
   protected async get<T = unknown>(

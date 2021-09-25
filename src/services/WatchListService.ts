@@ -8,6 +8,7 @@ import { loggerService } from './LoggerService';
 import { AddItemToWatchListRequest, CreateWatchListForUserRequest, UpdateWatchListRequest } from '@/models';
 import { LRUCache } from 'typescript-lru-cache';
 import { cloneDeep } from 'lodash';
+import { List } from 'typescript-extended-linq';
 
 export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, WatchList | WatchList[]>;
@@ -23,13 +24,13 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
     this.cache = cache;
   }
 
-  public async getWatchListsForUser(userId: number): Promise<WatchList[]> {
+  public async getWatchListsForUser(userId: number): Promise<List<WatchList>> {
     const cacheKey = this.getUserWatchListsCacheKey(userId);
     const cachedLists = this.cache.get(cacheKey);
 
     if (cachedLists) {
       if (Array.isArray(cachedLists)) {
-        return cachedLists;
+        return new List(cachedLists);
       } else {
         this.cache.delete(cacheKey);
       }
@@ -45,7 +46,7 @@ export class WatchListService extends WoWMarketWatcherAuthenticatedBaseService {
       this.cache.set(this.getWatchListCacheKey(userId, list.id), list);
     }
 
-    return nodes;
+    return new List(nodes);
   }
 
   public async getWatchListForUser(userId: number, watchListId: number): Promise<WatchList | null> {

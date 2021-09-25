@@ -3,13 +3,13 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { cloneDeep } from 'lodash';
 import { LRUCache } from 'typescript-lru-cache';
 import { AuctionTimeSeriesEntry } from '@/models/entities';
-import { CursorPaginatedResponse, HttpClientFactory, Logger, OrderByOptions } from '@/models/core';
+import { CursorPaginatedResponse, HttpClientFactory, Logger } from '@/models/core';
 import { AuctionTimeSeriesQueryParameters } from '@/models/queryParameters';
-import { ArrayUtilities } from '@/utilities';
 import { AuthService, authService } from './AuthService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
 import { EnvironmentService, environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
+import { List } from 'typescript-extended-linq';
 
 export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, CursorPaginatedResponse<AuctionTimeSeriesEntry>>;
@@ -47,17 +47,12 @@ export class AuctionTimeSeriesService extends WoWMarketWatcherAuthenticatedBaseS
   }
 
   public async getAuctionTimeSeries(
-    queryParams: Omit<AuctionTimeSeriesQueryParameters, 'first' | 'after' | 'before' | 'last' | 'includeEdges'>,
-    orderByOptions?: OrderByOptions<AuctionTimeSeriesEntry>
-  ): Promise<AuctionTimeSeriesEntry[]> {
+    queryParams: Omit<AuctionTimeSeriesQueryParameters, 'first' | 'after' | 'before' | 'last' | 'includeEdges'>
+  ): Promise<List<AuctionTimeSeriesEntry>> {
     const nodes = await this.getAllPages<AuctionTimeSeriesEntry, AuctionTimeSeriesQueryParameters>(
       params => this.getAuctionTimeSeriesPage(params),
       { ...queryParams, first: 500 }
     );
-
-    if (orderByOptions) {
-      ArrayUtilities.orderBy(nodes, orderByOptions);
-    }
 
     return nodes;
   }

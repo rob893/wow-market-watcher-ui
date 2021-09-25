@@ -221,7 +221,7 @@ import { Subscription } from 'rxjs';
 import { WoWItemQualityColor } from '@/models/blizzard';
 import { uiSettingsService } from '@/services';
 import { MathUtilities } from '@/utilities/MathUtilities';
-import { from } from 'typescript-extended-linq';
+import { from, List } from 'typescript-extended-linq';
 
 type ChartTimeFrame = 'week' | 'twoWeeks' | 'month';
 
@@ -682,17 +682,15 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         monthAgo.setDate(new Date().getDate() - 30);
 
         this.watchedItems.set(item.id, item);
-        const timeseries = await auctionTimeSeriesService.getAuctionTimeSeries(
-          {
+        const timeseries = (
+          await auctionTimeSeriesService.getAuctionTimeSeries({
             wowItemId: selectedItemId,
             connectedRealmId: connectedRealm.id,
             startDate: monthAgo.toISOString().split('T')[0]
-          },
-          {
-            orderBy: 'timestamp',
-            comparer: Comparer.dateAscending
-          }
-        );
+          })
+        )
+          .orderBy(ts => ts.timestamp, Comparer.dateAscending)
+          .toArray();
 
         this.itemTimeseries.set(item.id, timeseries);
         this.chartDatas?.push(this.getChartDatas(this.getTimeAgo(this.timeFrame), [[item.id, timeseries]])[0]);
@@ -715,7 +713,9 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       this.itemsLoading = true;
 
       try {
-        this.items = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
+        this.items = (await wowItemService.getItems({ nameLike: searchTerm, first: 25 }))
+          .orderBy(realm => realm.name)
+          .toArray();
       } catch (error) {
         console.error(error);
       } finally {
@@ -763,7 +763,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         .orderBy(item => item.wowItem.name)
         .toArray();
 
-      const timeSeriesPromises = new Map<number, Promise<AuctionTimeSeriesEntry[]>>();
+      const timeSeriesPromises = new Map<number, Promise<List<AuctionTimeSeriesEntry>>>();
 
       const monthAgo = new Date();
       monthAgo.setMonth(new Date().getMonth() - 1);
@@ -773,39 +773,30 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
         const { connectedRealmId, id, wowItemId } = watcheditem;
         timeSeriesPromises.set(
           id,
-          auctionTimeSeriesService.getAuctionTimeSeries(
-            {
-              wowItemId,
-              connectedRealmId,
-              startDate: monthAgo.toISOString().split('T')[0]
-            },
-            {
-              orderBy: 'timestamp',
-              comparer: Comparer.dateAscending
-            }
-          )
+          auctionTimeSeriesService.getAuctionTimeSeries({
+            wowItemId,
+            connectedRealmId,
+            startDate: monthAgo.toISOString().split('T')[0]
+          })
         );
       }
 
-      const connectedRealms = await realmService.getConnectedRealms();
+      this.realms = (await realmService.getConnectedRealms())
+        .pipe(connectedRealm => {
+          this.connectedRealmLookup.set(connectedRealm.id, connectedRealm);
 
-      this.realms = from(connectedRealms)
+          for (const realm of connectedRealm.realms) {
+            this.realmToConnectedRealmLookup.set(realm.id, connectedRealm);
+          }
+        })
         .selectMany(connectedRealm => connectedRealm.realms)
         .orderBy(realm => realm.name)
         .toArray();
 
-      this.connectedRealmLookup = from(connectedRealms).toMap(connectedRealm => connectedRealm.id);
-
-      for (const connectedRealm of connectedRealms) {
-        for (const realm of connectedRealm.realms) {
-          this.realmToConnectedRealmLookup.set(realm.id, connectedRealm);
-        }
-      }
-
       for (const [key, value] of timeSeriesPromises.entries()) {
         try {
           const timeseries = await value;
-          this.itemTimeseries.set(key, timeseries);
+          this.itemTimeseries.set(key, timeseries.orderBy(ts => ts.timestamp, Comparer.dateAscending).toArray());
         } catch (error) {
           loggerService.error(`Unable to get timeseries for ${key}`, error);
         }

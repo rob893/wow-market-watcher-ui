@@ -2,13 +2,14 @@ import querystring from 'query-string';
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { cloneDeep } from 'lodash';
 import { LRUCache } from 'typescript-lru-cache';
-import { ConnectedRealm, CursorPaginatedResponse, HttpClientFactory, Logger, OrderByOptions, Realm } from '@/models';
+import { ConnectedRealm, CursorPaginatedResponse, HttpClientFactory, Logger, Realm } from '@/models';
 import { authService, AuthService } from './AuthService';
 import { environmentService, EnvironmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 import { WoWMarketWatcherAuthenticatedBaseService } from './WoWMarketWatcherAuthenticatedBaseService';
 import { CursorPaginationParameters, RealmQueryParameters } from '@/models/queryParameters';
-import { ArrayUtilities, TypeGuards } from '@/utilities';
+import { TypeGuards } from '@/utilities';
+import { List } from 'typescript-extended-linq';
 
 export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, Realm | Realm[] | ConnectedRealm | ConnectedRealm[]>;
@@ -24,10 +25,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
     this.cache = cache;
   }
 
-  public async getRealms(
-    queryParams: RealmQueryParameters = {},
-    orderByOptions?: OrderByOptions<Realm>
-  ): Promise<Realm[]> {
+  public async getRealms(queryParams: RealmQueryParameters = {}): Promise<List<Realm>> {
     queryParams.includeEdges = false;
     const query = querystring.stringify(queryParams);
     const url = `wow/realms?${query}`;
@@ -36,11 +34,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isRealmArray(cachedEntry)) {
-        if (orderByOptions) {
-          ArrayUtilities.orderBy(cachedEntry, orderByOptions);
-        }
-
-        return cachedEntry;
+        return new List(cachedEntry);
       } else {
         this.cache.delete(url);
       }
@@ -56,11 +50,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
       this.cache.set(this.getRealmCacheKey(realm.id), realm);
     }
 
-    if (orderByOptions) {
-      ArrayUtilities.orderBy(nodes, orderByOptions);
-    }
-
-    return nodes;
+    return new List(nodes);
   }
 
   public async getRealm(realmId: number): Promise<Realm | null> {
@@ -85,10 +75,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
     return data;
   }
 
-  public async getConnectedRealms(
-    queryParams: CursorPaginationParameters = {},
-    orderByOptions?: OrderByOptions<ConnectedRealm>
-  ): Promise<ConnectedRealm[]> {
+  public async getConnectedRealms(queryParams: CursorPaginationParameters = {}): Promise<List<ConnectedRealm>> {
     queryParams.includeEdges = false;
     const query = querystring.stringify(queryParams);
     const url = `wow/connectedRealms?${query}`;
@@ -97,11 +84,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
 
     if (cachedEntry) {
       if (TypeGuards.isConnectedRealmArray(cachedEntry)) {
-        if (orderByOptions) {
-          ArrayUtilities.orderBy(cachedEntry, orderByOptions);
-        }
-
-        return cachedEntry;
+        return new List(cachedEntry);
       } else {
         this.cache.delete(url);
       }
@@ -121,11 +104,7 @@ export class RealmService extends WoWMarketWatcherAuthenticatedBaseService {
       }
     }
 
-    if (orderByOptions) {
-      ArrayUtilities.orderBy(nodes, orderByOptions);
-    }
-
-    return nodes;
+    return new List(nodes);
   }
 
   public async getConnectedRealm(realmId: number): Promise<ConnectedRealm | null> {

@@ -6,14 +6,15 @@ import { CursorPaginatedResponse, JSONPatchDocument } from '@/models/core';
 import { UpdateUserRequest } from '@/models/requests';
 import { environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
+import { List } from 'typescript-extended-linq';
 
 export class UserService extends WoWMarketWatcherAuthenticatedBaseService {
-  public async getUsers(): Promise<User[]> {
+  public async getUsers(): Promise<List<User>> {
     const {
       data: { nodes = [] }
     } = await this.get<CursorPaginatedResponse<User>>('users');
 
-    return nodes;
+    return new List(nodes);
   }
 
   public async getUser(id: number): Promise<User | null> {

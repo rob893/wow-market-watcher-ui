@@ -325,9 +325,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     this.loadingSubscription = loadingService.loadingStateChanged.subscribe(loading => (this.pageLoading = loading));
     loadingService.startLoading();
 
-    const watchLists = await watchListService.getWatchListsForUser(this.userId);
-
-    this.watchLists = watchLists;
+    this.watchLists = (await watchListService.getWatchListsForUser(this.userId)).toArray();
 
     loadingService.stopLoading();
   },

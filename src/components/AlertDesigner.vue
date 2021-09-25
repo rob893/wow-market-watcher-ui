@@ -326,7 +326,6 @@ import {
 } from '@/models';
 import Vue, { PropType } from 'vue';
 import { cloneDeep, debounce } from 'lodash';
-import { from } from 'typescript-extended-linq';
 import { ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
 import { realmService, uiSettingsService, wowItemService } from '@/services';
 import { WoWItemQualityColor } from '@/models/blizzard';
@@ -603,15 +602,12 @@ export default Vue.extend({
       this.itemsLoading = true;
 
       try {
-        const newItems = await wowItemService.getItems({ nameLike: searchTerm, first: 25 }, { orderBy: 'name' });
-
-        this.items = from([...this.items, ...newItems])
+        this.items = (await wowItemService.getItems({ nameLike: searchTerm, first: 25 }))
+          .concat(this.items)
           .distinctBy(item => item.id)
+          .pipe(item => this.itemsLookup.set(item.id, item))
+          .orderBy(item => item.name)
           .toArray();
-
-        for (const item of this.items) {
-          this.itemsLookup.set(item.id, item);
-        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -633,18 +629,12 @@ export default Vue.extend({
     this.loading = true;
 
     try {
-      const connectedRealms = await realmService.getConnectedRealms();
-
-      for (const connectedRealm of connectedRealms) {
-        this.connectedRealms.set(connectedRealm.id, connectedRealm);
-
-        for (const realm of connectedRealm.realms) {
-          this.realmsLookup.set(realm.id, realm);
-          this.realms.push(realm);
-        }
-      }
-
-      ArrayUtilities.orderBy(this.realms, realm => realm.name);
+      this.realms = (await realmService.getConnectedRealms())
+        .pipe(connectedRealm => this.connectedRealms.set(connectedRealm.id, connectedRealm))
+        .selectMany(connectedRealm => connectedRealm.realms)
+        .pipe(realm => this.realmsLookup.set(realm.id, realm))
+        .orderBy(realm => realm.name)
+        .toArray();
 
       await this.loadItems();
     } catch (error) {

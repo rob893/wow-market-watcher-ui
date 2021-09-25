@@ -85,7 +85,7 @@ import { Subscription } from 'rxjs';
 import { Alert, AlertConditionMetric, AlertState, ConnectedRealm, Realm, WoWItem } from '@/models';
 import { alertService } from '@/services/AlertService';
 import { Utilities } from '@/utilities';
-import { from, List } from 'typescript-extended-linq';
+import { List } from 'typescript-extended-linq';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'Alerts',
@@ -196,9 +196,8 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     }
 
-    this.connectedRealms = from(connectedRealms).toMap(connectedRealm => connectedRealm.id);
-
-    this.realms = from(connectedRealms)
+    this.realms = connectedRealms
+      .pipe(connectedRealm => this.connectedRealms.set(connectedRealm.id, connectedRealm))
       .selectMany(r => r.realms)
       .pipe(realm => this.realmsLookup.set(realm.id, realm))
       .orderBy(realm => realm.name)
