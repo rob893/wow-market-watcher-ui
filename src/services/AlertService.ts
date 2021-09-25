@@ -6,6 +6,7 @@ import { CursorPaginatedResponse, HttpClientFactory, Logger } from '@/models/cor
 import { EnvironmentService, environmentService } from './EnvironmentService';
 import { loggerService } from './LoggerService';
 import { LRUCache } from 'typescript-lru-cache';
+import { List } from 'typescript-extended-linq';
 import { cloneDeep } from 'lodash';
 import { CreateAlertForUserRequest, UpdateAlertRequest } from '@/models';
 
@@ -23,13 +24,13 @@ export class AlertService extends WoWMarketWatcherAuthenticatedBaseService {
     this.cache = cache;
   }
 
-  public async getAlertsForUser(userId: number): Promise<Alert[]> {
+  public async getAlertsForUser(userId: number): Promise<List<Alert>> {
     const cacheKey = this.getUserAlertsCacheKey(userId);
     const cachedAlerts = this.cache.get(cacheKey);
 
     if (cachedAlerts) {
       if (Array.isArray(cachedAlerts)) {
-        return cachedAlerts;
+        return new List(cachedAlerts);
       } else {
         this.cache.delete(cacheKey);
       }
@@ -45,7 +46,7 @@ export class AlertService extends WoWMarketWatcherAuthenticatedBaseService {
       this.cache.set(this.getAlertCacheKey(userId, alert.id), alert);
     }
 
-    return nodes;
+    return new List(nodes);
   }
 
   public async getAlertForUser(userId: number, alertId: number): Promise<Alert | null> {

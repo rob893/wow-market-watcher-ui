@@ -84,7 +84,8 @@ import { UserMixin } from '@/mixins/UserMixin';
 import { Subscription } from 'rxjs';
 import { Alert, AlertConditionMetric, AlertState, ConnectedRealm, Realm, WoWItem } from '@/models';
 import { alertService } from '@/services/AlertService';
-import { ArrayUtilities, Utilities } from '@/utilities';
+import { Utilities } from '@/utilities';
+import { from, List } from 'typescript-extended-linq';
 
 export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'Alerts',
@@ -98,7 +99,7 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   data: () => ({
     pageLoading: false,
     loadingSubscription: new Subscription(),
-    alerts: [] as Alert[],
+    alerts: new List<Alert>(),
     selectedAlert: null as Alert | null,
     showDeleteDialog: false,
     stagedAlertToDelete: null as Alert | null,
@@ -182,9 +183,11 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
     const alerts = await alertService.getAlertsForUser(this.userId);
     const connectedRealms = await realmsPromise;
     const items = await Promise.all(
-      [...new Set(alerts.flatMap(alert => alert.conditions).map(condition => condition.wowItemId))].map(itemId =>
-        wowItemService.getItem(itemId)
-      )
+      alerts
+        .selectMany(alert => alert.conditions)
+        .select(condition => condition.wowItemId)
+        .distinct()
+        .select(itemId => wowItemService.getItem(itemId))
     );
 
     for (const item of items) {
@@ -193,16 +196,13 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
     }
 
-    for (const connectedRealm of connectedRealms) {
-      this.connectedRealms.set(connectedRealm.id, connectedRealm);
+    this.connectedRealms = from(connectedRealms).toMap(connectedRealm => connectedRealm.id);
 
-      for (const realm of connectedRealm.realms) {
-        this.realmsLookup.set(realm.id, realm);
-        this.realms.push(realm);
-      }
-    }
-
-    ArrayUtilities.orderBy(this.realms, realm => realm.name);
+    this.realms = from(connectedRealms)
+      .selectMany(r => r.realms)
+      .pipe(realm => this.realmsLookup.set(realm.id, realm))
+      .orderBy(realm => realm.name)
+      .toArray();
 
     this.alerts = alerts;
 
