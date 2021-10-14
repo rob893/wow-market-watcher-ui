@@ -11,7 +11,7 @@ export abstract class WoWMarketWatcherBaseService {
 
   protected readonly httpClient: AxiosInstance;
 
-  private readonly inProgressRequestMap: Map<string, Promise<AxiosResponse>> = new Map();
+  private readonly inProgressRequestMap: Map<string, Promise<AxiosResponse<any, any>>> = new Map();
 
   public constructor(
     httpClientFactory: HttpClientFactory<AxiosInstance, AxiosRequestConfig>,

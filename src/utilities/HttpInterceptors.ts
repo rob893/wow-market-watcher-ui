@@ -209,6 +209,10 @@ export class HttpInterceptors {
         config.metadata = {};
       }
 
+      if (!config.headers) {
+        config.headers = {};
+      }
+
       if (config.headers[WoWMarketWatcherServiceHeader.CorrelationId]) {
         logger.debug(
           `${HttpInterceptors.name}.${this.useCorrelationIdInterceptor.name}: Correlation id already attached to request.`
@@ -241,6 +245,11 @@ export class HttpInterceptors {
       );
 
       const token = await authService.getAccessToken();
+
+      if (!config.headers) {
+        config.headers = {};
+      }
+
       config.headers.authorization = `Bearer ${token}`;
 
       logger.info(
@@ -297,6 +306,7 @@ export class HttpInterceptors {
 
           if (
             status === HttpStatusCode.Unauthorized &&
+            headers &&
             headers[WoWMarketWatcherServiceHeader.TokenExpired] &&
             !config.metadata?.refreshRetryAttempted
           ) {
@@ -305,6 +315,11 @@ export class HttpInterceptors {
             );
 
             const { token } = await authService.refreshAccessToken();
+
+            if (!config.headers) {
+              config.headers = {};
+            }
+
             config.headers.authorization = `Bearer ${token}`;
 
             if (config.metadata) {
