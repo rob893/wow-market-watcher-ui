@@ -43,13 +43,13 @@ export interface AddItemToWatchListRequest {
   connectedRealmId: number;
 }
 
-export interface CreateAlertActionRequest {
+export interface CreateOrPutAlertActionRequest {
   actionOn: AlertActionOnType;
   type: AlertActionType;
   target: string;
 }
 
-export interface CreateAlertConditionRequest {
+export interface CreateOrPutAlertConditionRequest {
   connectedRealmId: number;
   wowItemId: number;
   metric: AlertConditionMetric;
@@ -59,11 +59,11 @@ export interface CreateAlertConditionRequest {
   threshold: number;
 }
 
-export interface CreateAlertForUserRequest {
+export interface CreateOrPutAlertForUserRequest {
   name: string;
   description?: string;
-  actions: CreateAlertActionRequest[];
-  conditions: CreateAlertConditionRequest[];
+  actions: CreateOrPutAlertActionRequest[];
+  conditions: CreateOrPutAlertConditionRequest[];
 }
 
 export interface PutAlertActionRequest {

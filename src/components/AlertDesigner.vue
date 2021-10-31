@@ -18,7 +18,7 @@
               <v-row>
                 <v-col cols="12" sm="6">
                   <v-autocomplete
-                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.wowItem"
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.wowItemId"
                     :items="items"
                     :loading="itemsLoading"
                     :search-input.sync="itemsSearchTerm"
@@ -46,10 +46,10 @@
 
                 <v-col cols="12" sm="6">
                   <v-autocomplete
-                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.realm"
+                    v-model="addOrUpdateConditionDialog.newOrUpdatedCondition.connectedRealmId"
                     :items="realms"
                     item-text="name"
-                    item-value="id"
+                    item-value="connectedRealmId"
                     class="mx-4"
                     hide-no-data
                     hide-details
@@ -195,9 +195,12 @@
           <v-spacer></v-spacer>
           <v-toolbar-items>
             <v-btn dark text @click="closeDialog()"> Cancel </v-btn>
-            <v-btn dark text type="submit"> Save </v-btn>
+            <v-btn dark text type="submit"> {{ alert ? 'Save' : 'Create' }} </v-btn>
           </v-toolbar-items>
         </v-toolbar>
+
+        <v-alert v-for="(error, index) in errors" :key="index" type="error">{{ error }}</v-alert>
+
         <v-list three-line subheader>
           <v-subheader>General</v-subheader>
           <v-list-item>
@@ -318,26 +321,36 @@ import {
   AlertConditionMetric,
   AlertConditionOperator,
   ConnectedRealm,
-  CreateAlertActionRequest,
-  CreateAlertConditionRequest,
-  CreateAlertForUserRequest,
+  CreateOrPutAlertActionRequest,
+  CreateOrPutAlertConditionRequest,
+  CreateOrPutAlertForUserRequest,
   Realm,
   WoWItem
 } from '@/models';
-import Vue, { PropType } from 'vue';
+import { UserMixin } from '@/mixins/UserMixin';
+import Vue, { PropType, VueConstructor } from 'vue';
 import { cloneDeep, debounce } from 'lodash';
 import { ArrayUtilities, ColorUtilities, Utilities } from '@/utilities';
-import { realmService, uiSettingsService, wowItemService } from '@/services';
+import { realmService, uiSettingsService, wowItemService, loadingService } from '@/services';
 import { WoWItemQualityColor } from '@/models/blizzard';
+import { alertService } from '@/services/AlertService';
+import { from } from 'typescript-extended-linq';
 
-export default Vue.extend({
+export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).extend({
   name: 'AlertDesigner',
+
+  mixins: [UserMixin],
 
   props: {
     value: Boolean,
     wowItemId: {
       type: Number,
       required: false
+    },
+    initialAlertPrice: {
+      type: Number,
+      required: false,
+      default: 10000
     },
     connectedRealmId: {
       type: Number,
@@ -350,6 +363,7 @@ export default Vue.extend({
   },
 
   data: () => ({
+    errors: [] as string[],
     formValid: false,
     loading: false,
     nameRules: [(name: string) => !!name || 'Name is required'],
@@ -381,7 +395,7 @@ export default Vue.extend({
         value
       })),
       currentIndex: null as number | null,
-      newOrUpdatedCondition: {} as CreateAlertConditionRequest & { wowItem?: WoWItem | null; realm?: Realm | null }
+      newOrUpdatedCondition: {} as CreateOrPutAlertConditionRequest & { wowItem?: WoWItem | null; realm?: Realm | null }
     },
     addOrUpdateActionDialog: {
       targetRules: [
@@ -399,28 +413,28 @@ export default Vue.extend({
         value
       })),
       currentIndex: null as number | null,
-      newOrUpdatedAction: {} as CreateAlertActionRequest
+      newOrUpdatedAction: {} as CreateOrPutAlertActionRequest
     },
     alertToModify: {
       name: '',
       description: '',
       conditions: [],
       actions: []
-    } as CreateAlertForUserRequest
+    } as CreateOrPutAlertForUserRequest
   }),
 
   methods: {
-    getActionText(action: AlertAction | CreateAlertActionRequest): string {
+    getActionText(action: AlertAction | CreateOrPutAlertActionRequest): string {
       return `When alert ${
         action.actionOn === AlertActionOnType.AlertActivated ? 'activates' : 'deactivates'
       }, send ${action.type.toLowerCase()} to ${action.target}.`;
     },
 
-    removeCondition(condition: CreateAlertConditionRequest): void {
+    removeCondition(condition: CreateOrPutAlertConditionRequest): void {
       ArrayUtilities.removeItem(this.alertToModify.conditions, condition);
     },
 
-    removeAction(action: CreateAlertActionRequest): void {
+    removeAction(action: CreateOrPutAlertActionRequest): void {
       ArrayUtilities.removeItem(this.alertToModify.actions, action);
     },
 
@@ -489,7 +503,7 @@ export default Vue.extend({
         this.addOrUpdateActionDialog.newOrUpdatedAction = {
           type: AlertActionType.Email,
           actionOn: AlertActionOnType.AlertActivated,
-          target: ''
+          target: this.user.email
         };
       }
 
@@ -499,7 +513,13 @@ export default Vue.extend({
     openAddOrUpdateConditionDialog(index?: number): void {
       if (typeof index === 'number') {
         this.addOrUpdateConditionDialog.currentIndex = index;
-        this.addOrUpdateConditionDialog.newOrUpdatedCondition = { ...this.alertToModify.conditions[index] };
+        this.addOrUpdateConditionDialog.newOrUpdatedCondition = {
+          ...this.alertToModify.conditions[index],
+          wowItem: this.items.find(item => item.id === this.alertToModify.conditions[index].wowItemId), // can't use lookup due to needing item from autocomplete box
+          realm: this.realms.find(
+            realm => realm.connectedRealmId === this.alertToModify.conditions[index].connectedRealmId
+          ) // can't use lookup due to needing item from autocomplete box
+        };
       } else {
         this.addOrUpdateConditionDialog.currentIndex = null;
         this.addOrUpdateConditionDialog.newOrUpdatedCondition = {
@@ -510,8 +530,8 @@ export default Vue.extend({
             ? this.realms.find(realm => realm.connectedRealmId === this.connectedRealmId)
             : null, // can't use lookup due to needing item from autocomplete box
           metric: AlertConditionMetric.MinPrice,
-          operator: AlertConditionOperator.GreaterThan,
-          threshold: 10000,
+          operator: AlertConditionOperator.LessThan,
+          threshold: this.initialAlertPrice,
           aggregationType: AlertConditionAggregationType.Max,
           aggregationTimeGranularityInHours: 1
         };
@@ -520,7 +540,7 @@ export default Vue.extend({
       this.addOrUpdateConditionDialog.showDialog = true;
     },
 
-    getConditionString(condition: AlertCondition | CreateAlertConditionRequest): string {
+    getConditionString(condition: AlertCondition | CreateOrPutAlertConditionRequest): string {
       const item = this.itemsLookup.get(condition.wowItemId);
       const realms = this.connectedRealms.get(condition.connectedRealmId)?.realms ?? [];
       const { g, s, c } = Utilities.convertToGoldSilverCopper(condition.threshold);
@@ -548,13 +568,79 @@ export default Vue.extend({
       }.`;
     },
 
-    saveAlert(): void {
-      console.log('Alert saved!');
+    validateAlert(): { valid: boolean; errors: string[] } {
+      let errors: string[] = [];
+
+      if (!this.alertToModify.name) {
+        errors.push('Name is required.');
+      }
+
+      if (this.alertToModify.actions.length === 0) {
+        errors.push('At least one action is required.');
+      }
+
+      if (this.alertToModify.conditions.length === 0) {
+        errors.push('At least one condition is required.');
+      }
+
+      return { valid: errors.length === 0, errors };
+    },
+
+    async saveAlert(): Promise<void> {
+      const { valid, errors } = this.validateAlert();
+
+      if (!valid) {
+        this.errors = [...errors];
+        return;
+      }
+
+      try {
+        loadingService.startLoading();
+
+        if (this.alert) {
+          await this.updateAlert();
+        } else {
+          await this.createAlert();
+        }
+      } finally {
+        loadingService.stopLoading();
+      }
+
       this.closeDialog();
+    },
+
+    async createAlert(): Promise<void> {
+      try {
+        const newAlert = await alertService.createAlertForUser(this.userId, this.alertToModify);
+        this.onAlertCreated(newAlert);
+      } catch (error) {
+        console.log(error);
+      }
+    },
+
+    async updateAlert(): Promise<void> {
+      try {
+        if (!this.alert) {
+          throw new Error('No alert to modify');
+        }
+        const updatedAlert = await alertService.putAlertForUser(this.userId, this.alert.id, this.alertToModify);
+        this.onAlertUpdated(updatedAlert);
+      } catch (error) {
+        console.log(error);
+      }
+    },
+
+    onAlertUpdated(updatedAlert: Alert): void {
+      this.$emit('alert-updated', updatedAlert);
+    },
+
+    onAlertCreated(newAlert: Alert): void {
+      this.$emit('alert-created', newAlert);
     },
 
     closeDialog(): void {
       this.resetUpsertAlertForm();
+      this.errors = [];
       this.show = false;
     },
 
@@ -574,25 +660,27 @@ export default Vue.extend({
 
     async loadItems(): Promise<void> {
       if (this.alert) {
-        const items = await Promise.all(
-          [
-            ...new Set(
-              typeof this.wowItemId === 'number'
-                ? [...this.alert.conditions.map(condition => condition.wowItemId), this.wowItemId]
-                : this.alert.conditions.map(condition => condition.wowItemId)
-            )
-          ].map(itemId => wowItemService.getItem(itemId))
-        );
+        const items = (
+          await Promise.all(
+            [
+              ...new Set(
+                typeof this.wowItemId === 'number'
+                  ? [...this.alert.conditions.map(condition => condition.wowItemId), this.wowItemId]
+                  : this.alert.conditions.map(condition => condition.wowItemId)
+              )
+            ].map(itemId => wowItemService.getItem(itemId))
+          )
+        ).filter(item => item !== null) as WoWItem[];
 
-        for (const item of items) {
-          if (item) {
-            this.itemsLookup.set(item.id, item);
-          }
-        }
+        this.items = from([...this.items, ...items])
+          .distinctBy(item => item.id)
+          .pipe(item => this.itemsLookup.set(item.id, item))
+          .toArray();
       } else if (typeof this.wowItemId === 'number') {
         const item = await wowItemService.getItem(this.wowItemId);
 
         if (item) {
+          this.items = [item];
           this.itemsLookup.set(this.wowItemId, item);
         }
       }
@@ -627,6 +715,7 @@ export default Vue.extend({
 
   async mounted(): Promise<void> {
     this.loading = true;
+    this.errors = [];
 
     try {
       this.realms = (await realmService.getConnectedRealms())
@@ -665,19 +754,7 @@ export default Vue.extend({
           actions: []
         };
 
-        if (this.alert) {
-          const items = await Promise.all(
-            [...new Set(this.alert.conditions.map(condition => condition.wowItemId))].map(itemId =>
-              wowItemService.getItem(itemId)
-            )
-          );
-
-          for (const item of items) {
-            if (item) {
-              this.itemsLookup.set(item.id, item);
-            }
-          }
-        }
+        await this.loadItems();
       } catch (error) {
         console.error(error);
       } finally {

@@ -4,6 +4,7 @@
       v-model="createAlertDialog.show"
       :connectedRealmId="createAlertDialog.watchedItem ? createAlertDialog.watchedItem.connectedRealmId : undefined"
       :wowItemId="createAlertDialog.watchedItem ? createAlertDialog.watchedItem.wowItemId : undefined"
+      :initialAlertPrice="getSelectedItemsMostRecentPrice()"
     >
     </alert-designer>
     <v-row v-if="!pageLoading && chartDatas">
@@ -612,6 +613,20 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
       }
 
       return realm;
+    },
+
+    getSelectedItemsMostRecentPrice(): number {
+      if (!this.createAlertDialog.watchedItem?.id) {
+        return 0;
+      }
+
+      const stats = this.rangeStats.get(this.createAlertDialog.watchedItem.id);
+
+      if (!stats) {
+        return 0;
+      }
+
+      return stats.currentPrice * 10000;
     },
 
     getRangeStats(watchedItemId: number): TimeRangePriceStats {

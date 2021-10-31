@@ -1,6 +1,25 @@
 <template>
   <v-container fluid>
-    <alert-designer v-model="showCreateAlertDialog" :alert="selectedAlert"> </alert-designer>
+    <alert-designer
+      v-model="showCreateAlertDialog"
+      :alert="selectedAlert"
+      v-on:alert-created="onAlertCreated"
+      v-on:alert-updated="onAlertUpdated"
+    >
+    </alert-designer>
+
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="headline">Are you sure you want to delete this alert?</v-card-title>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="cancelDeleteStagedAlert">Cancel</v-btn>
+          <v-btn color="blue darken-1" text @click="deleteStagedAlert">OK</v-btn>
+          <v-spacer></v-spacer>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-row v-if="!pageLoading">
       <v-col cols="12">
         <v-card>
@@ -111,6 +130,27 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
   }),
 
   methods: {
+    cancelDeleteStagedAlert(): void {
+      this.stagedAlertToDelete = null;
+      this.showDeleteDialog = false;
+    },
+
+    async deleteStagedAlert(): Promise<void> {
+      if (!this.stagedAlertToDelete) {
+        return;
+      }
+
+      try {
+        await alertService.deleteAlertForUser(this.userId, this.stagedAlertToDelete.id);
+        this.alerts.remove(this.stagedAlertToDelete);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.stagedAlertToDelete = null;
+        this.showDeleteDialog = false;
+      }
+    },
+
     getAlertColor(alert: Alert): string {
       switch (alert.state) {
         case AlertState.InsufficientData:
@@ -126,6 +166,16 @@ export default (Vue as VueConstructor<Vue & InstanceType<typeof UserMixin>>).ext
 
     splitAtUpperCase(str: string): string {
       return Utilities.splitAtUpperCase(str);
+    },
+
+    onAlertUpdated(updatedAlert: Alert): void {
+      const current = this.alerts.indexOf(this.alerts.first(alert => alert.id === updatedAlert.id));
+      this.alerts.insert(current, updatedAlert);
+      this.alerts.removeAt(current + 1);
+    },
+
+    onAlertCreated(newAlert: Alert): void {
+      this.alerts.add(newAlert);
     },
 
     getConditionsString(alert: Alert): string {

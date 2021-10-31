@@ -8,7 +8,7 @@ import { loggerService } from './LoggerService';
 import { LRUCache } from 'typescript-lru-cache';
 import { List } from 'typescript-extended-linq';
 import { cloneDeep } from 'lodash';
-import { CreateAlertForUserRequest, UpdateAlertRequest } from '@/models';
+import { CreateOrPutAlertForUserRequest, UpdateAlertRequest } from '@/models';
 
 export class AlertService extends WoWMarketWatcherAuthenticatedBaseService {
   private readonly cache: LRUCache<string, Alert | Alert[]>;
@@ -70,8 +70,20 @@ export class AlertService extends WoWMarketWatcherAuthenticatedBaseService {
     return data;
   }
 
-  public async createAlertForUser(userId: number, createAlertRequest: CreateAlertForUserRequest): Promise<Alert> {
+  public async createAlertForUser(userId: number, createAlertRequest: CreateOrPutAlertForUserRequest): Promise<Alert> {
     const { data } = await this.post<Alert>(`users/${userId}/alerts`, createAlertRequest);
+
+    this.updateCachedUserAlert(userId, data);
+
+    return data;
+  }
+
+  public async putAlertForUser(
+    userId: number,
+    alertId: number,
+    putAlertRequest: CreateOrPutAlertForUserRequest
+  ): Promise<Alert> {
+    const { data } = await this.put<Alert>(`users/${userId}/alerts/${alertId}`, putAlertRequest);
 
     this.updateCachedUserAlert(userId, data);
 
